@@ -1,6 +1,6 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-/** HTMLレポートをメール送信 */
+/** HTMLレポートをGmail SMTPでメール送信 */
 export async function sendReportEmail(
   html: string,
   dateStr: string
@@ -11,23 +11,27 @@ export async function sendReportEmail(
     return;
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.warn("RESEND_API_KEY not set, skipping email");
+  const user = process.env.GMAIL_USER;
+  if (!user) {
+    console.warn("GMAIL_USER not set, skipping email");
     return;
   }
 
-  // ビルド時に初期化されないようlazyに生成
-  const resend = new Resend(apiKey);
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  if (!pass) {
+    console.warn("GMAIL_APP_PASSWORD not set, skipping email");
+    return;
+  }
 
-  const { error } = await resend.emails.send({
-    from: "Portfolio Report <report@resend.dev>",
-    to: [to],
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user, pass },
+  });
+
+  await transporter.sendMail({
+    from: `"StockNote" <${user}>`,
+    to,
     subject: `📊 Portfolio Daily Report — ${dateStr}`,
     html,
   });
-
-  if (error) {
-    throw new Error(`Resend error: ${error.message}`);
-  }
 }
