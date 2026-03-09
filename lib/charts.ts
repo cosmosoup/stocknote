@@ -105,18 +105,18 @@ function buildBar(portfolio: PortfolioEval[]): string {
 
 /** ポートフォリオ vs S&P500 累積リターン比較 */
 function buildCompare(history: HistoryPoint[]): string {
-  // 日次%を累積加算（期間内の相対比較）
-  let portCum = 0;
-  let sp500Cum = 0;
+  // 複利で累積リターンを計算: (1 + r1/100) × (1 + r2/100) × … - 1
+  let portMul = 1;
+  let sp500Mul = 1;
   const portData: number[] = [];
   const sp500Data: number[] = [];
   const labels: string[] = [];
 
   for (const h of history) {
-    portCum += h.daily_pct ?? 0;
-    sp500Cum += h.sp500_chg ?? 0;
-    portData.push(parseFloat(portCum.toFixed(2)));
-    sp500Data.push(parseFloat(sp500Cum.toFixed(2)));
+    portMul *= 1 + (h.daily_pct ?? 0) / 100;
+    sp500Mul *= 1 + (h.sp500_chg ?? 0) / 100;
+    portData.push(parseFloat(((portMul - 1) * 100).toFixed(2)));
+    sp500Data.push(parseFloat(((sp500Mul - 1) * 100).toFixed(2)));
     // MM/DD 形式
     labels.push(h.date.slice(5).replace("-", "/"));
   }
