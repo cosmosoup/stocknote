@@ -80,24 +80,34 @@ export default function MonthlyPage() {
       {/* ── ナビ ── */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <a href="/" className="text-slate-500 hover:text-slate-900 text-sm transition-colors">
-              ‹ 最新レポート
+          <div className="flex items-center gap-2 sm:gap-4">
+            <a href="/" className="text-slate-500 hover:text-slate-900 text-xs sm:text-sm transition-colors">
+              <span className="sm:hidden">‹ 最新</span>
+              <span className="hidden sm:inline">‹ 最新レポート</span>
             </a>
             <span className="text-slate-300">|</span>
-            <a href="/history" className="text-slate-500 hover:text-slate-900 text-sm transition-colors">
-              レポート一覧
+            <a href="/history" className="text-slate-500 hover:text-slate-900 text-xs sm:text-sm transition-colors">
+              <span className="sm:hidden">一覧</span>
+              <span className="hidden sm:inline">レポート一覧</span>
             </a>
             <span className="text-slate-300">|</span>
-            <span className="text-slate-800 font-semibold text-sm">月次レポート</span>
+            <span className="text-slate-800 font-semibold text-xs sm:text-sm">
+              <span className="sm:hidden">月次</span>
+              <span className="hidden sm:inline">月次レポート</span>
+            </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <button
               onClick={() => void handleGenerate()}
               disabled={generating}
-              className="px-3 py-1.5 bg-[#008b8b] hover:bg-[#006d6d] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-xs rounded-lg font-medium transition-colors"
+              className="px-2.5 py-1.5 sm:px-3 bg-[#008b8b] hover:bg-[#006d6d] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-xs rounded-lg font-medium transition-colors whitespace-nowrap"
             >
-              {generating ? "生成中…" : "今月を生成"}
+              {generating ? "生成中…" : (
+                <>
+                  <span className="sm:hidden">生成</span>
+                  <span className="hidden sm:inline">今月を生成</span>
+                </>
+              )}
             </button>
             <button
               onClick={() => void handleLogout()}
@@ -161,14 +171,14 @@ export default function MonthlyPage() {
                   </div>
 
                   {/* 右: 数値 + シェブロン */}
-                  <div className="flex items-center gap-5 shrink-0 ml-4">
+                  <div className="flex items-center gap-3 sm:gap-5 shrink-0 ml-3 sm:ml-4">
                     <div className="text-right">
-                      <div className="text-slate-400 text-xs mb-0.5">月次騰落</div>
+                      <div className="text-slate-400 text-xs mb-0.5">月次</div>
                       <div className={`font-mono font-semibold text-sm tabular-nums ${pctColor(item.monthly_pct)}`}>
                         {fmtPct(item.monthly_pct)}
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="hidden sm:block text-right">
                       <div className="text-slate-400 text-xs mb-0.5">評価額（月末）</div>
                       <div className="font-mono text-slate-700 font-semibold text-sm tabular-nums">
                         {item.total_jpy.toFixed(0)}万円

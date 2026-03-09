@@ -222,14 +222,13 @@ export default function PortfolioPage() {
         </div>
 
         {/* 銘柄テーブル */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-sm">
           {loading ? (
             <div className="text-slate-400 text-center py-8 text-sm">読み込み中...</div>
           ) : items.length === 0 ? (
             <div className="text-slate-400 text-center py-8 text-sm">銘柄が登録されていません。</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[640px]">
+            <table className="w-full text-sm min-w-[640px]">
                 <thead>
                   <tr className="border-b border-slate-100">
                     {["ID", "ティッカー", "口数", "取得単価", "取得レート", "銘柄別メモ", ""].map((h) => (
@@ -268,7 +267,6 @@ export default function PortfolioPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
           )}
         </div>
       </div>

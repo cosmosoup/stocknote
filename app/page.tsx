@@ -103,19 +103,26 @@ export default function HomePage() {
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           </a>
-          <div className="flex items-center gap-4">
-            <a href="/history" className="text-slate-500 hover:text-slate-900 text-sm transition-colors">
-              レポート一覧
+          <div className="flex items-center gap-2 sm:gap-4">
+            <a href="/history" className="text-slate-500 hover:text-slate-900 text-xs sm:text-sm transition-colors">
+              <span className="sm:hidden">一覧</span>
+              <span className="hidden sm:inline">レポート一覧</span>
             </a>
-            <a href="/portfolio" className="text-slate-500 hover:text-slate-900 text-sm transition-colors">
-              銘柄管理
+            <a href="/portfolio" className="text-slate-500 hover:text-slate-900 text-xs sm:text-sm transition-colors">
+              <span className="sm:hidden">銘柄</span>
+              <span className="hidden sm:inline">銘柄管理</span>
             </a>
             <button
               onClick={() => void handleGenerate()}
               disabled={generating}
-              className="px-4 py-1.5 bg-[#008b8b] hover:bg-[#006d6d] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-sm rounded-lg font-medium transition-colors"
+              className="px-2.5 py-1.5 sm:px-4 bg-[#008b8b] hover:bg-[#006d6d] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-xs sm:text-sm rounded-lg font-medium transition-colors whitespace-nowrap"
             >
-              {generating ? "生成中…" : "今すぐ生成"}
+              {generating ? "生成中…" : (
+                <>
+                  <span className="sm:hidden">生成</span>
+                  <span className="hidden sm:inline">今すぐ生成</span>
+                </>
+              )}
             </button>
             <button
               onClick={() => void handleLogout()}

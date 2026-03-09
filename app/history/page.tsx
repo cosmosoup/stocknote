@@ -111,15 +111,17 @@ export default function HistoryPage() {
       {/* ── ナビ ── */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <a href="/" className="text-slate-500 hover:text-slate-900 text-sm transition-colors">
-              ‹ 最新レポート
+          <div className="flex items-center gap-2 sm:gap-4">
+            <a href="/" className="text-slate-500 hover:text-slate-900 text-xs sm:text-sm transition-colors">
+              <span className="sm:hidden">‹ 最新</span>
+              <span className="hidden sm:inline">‹ 最新レポート</span>
             </a>
             <span className="text-slate-300">|</span>
-            <span className="text-slate-800 font-semibold text-sm">レポート一覧</span>
+            <span className="text-slate-800 font-semibold text-xs sm:text-sm">レポート一覧</span>
             <span className="text-slate-300">|</span>
-            <a href="/monthly" className="text-slate-500 hover:text-slate-900 text-sm transition-colors">
-              月次レポート
+            <a href="/monthly" className="text-slate-500 hover:text-slate-900 text-xs sm:text-sm transition-colors">
+              <span className="sm:hidden">月次</span>
+              <span className="hidden sm:inline">月次レポート</span>
             </a>
           </div>
           <button
