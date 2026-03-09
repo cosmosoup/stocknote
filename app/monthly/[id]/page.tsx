@@ -84,32 +84,42 @@ export default function MonthlyDetailPage() {
       {/* ── ナビ ── */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
+          {/* 左: モバイルはシンプル戻るリンク / PC はフルパンくず */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {/* モバイルのみ */}
+            <a
+              href="/monthly"
+              className="sm:hidden text-slate-500 hover:text-slate-800 text-sm transition-colors shrink-0"
+            >
+              ‹ 月次一覧
+            </a>
+            {/* PC のみ */}
             <a
               href="/history"
-              className="text-slate-500 hover:text-slate-800 text-sm transition-colors shrink-0"
+              className="hidden sm:inline text-slate-500 hover:text-slate-800 text-sm transition-colors shrink-0"
             >
               ‹ レポート一覧
             </a>
-            <span className="text-slate-300 shrink-0">|</span>
+            <span className="hidden sm:inline text-slate-300 shrink-0">|</span>
             <a
               href="/monthly"
-              className="text-slate-500 hover:text-slate-800 text-sm transition-colors shrink-0"
+              className="hidden sm:inline text-slate-500 hover:text-slate-800 text-sm transition-colors shrink-0"
             >
               月次レポート一覧
             </a>
             {monthLabel && (
               <>
-                <span className="text-slate-300 shrink-0">|</span>
-                <span className="text-slate-700 text-sm font-medium truncate">
+                <span className="hidden sm:inline text-slate-300 shrink-0">|</span>
+                <span className="hidden sm:inline text-slate-700 text-sm font-medium truncate">
                   📅 {monthLabel}
                 </span>
               </>
             )}
           </div>
-          <div className="flex items-center gap-4 shrink-0 ml-4">
+          {/* 右: PC は月次%も表示 / モバイルはログアウトのみ */}
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0 ml-4">
             {data && (
-              <span className={`text-sm font-mono font-semibold tabular-nums ${pctColor(data.monthly_pct)}`}>
+              <span className={`hidden sm:inline text-sm font-mono font-semibold tabular-nums ${pctColor(data.monthly_pct)}`}>
                 月次: {data.monthly_pct >= 0 ? "+" : ""}{data.monthly_pct.toFixed(2)}%
               </span>
             )}
