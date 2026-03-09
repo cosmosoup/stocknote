@@ -116,10 +116,10 @@ export default function HistoryPage() {
               ‹ 最新レポート
             </a>
             <span className="text-slate-300">|</span>
-            <span className="text-slate-800 font-semibold text-sm">日次履歴</span>
+            <span className="text-slate-800 font-semibold text-sm">レポート一覧</span>
             <span className="text-slate-300">|</span>
             <a href="/monthly" className="text-slate-500 hover:text-slate-900 text-sm transition-colors">
-              月次サマリー
+              月次レポート
             </a>
           </div>
           <button
@@ -156,7 +156,7 @@ export default function HistoryPage() {
               const monthlyId = monthlyMap.get(group.monthKey);
               return (
                 <div key={group.monthKey}>
-                  {/* 月ラベル + 月次サマリーリンク */}
+                  {/* 月ラベル + 月次レポートリンク */}
                   <div className="flex items-center gap-3 mb-2 px-1">
                     <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">
                       {group.label}
@@ -168,7 +168,7 @@ export default function HistoryPage() {
                         href={`/monthly/${monthlyId}`}
                         className="flex items-center gap-1 text-[0.7rem] font-medium text-[#008b8b] hover:text-[#006d6d] bg-[#e6f7f7] hover:bg-[#cceeee] px-2.5 py-0.5 rounded-full transition-colors"
                       >
-                        📅 月次サマリー ›
+                        📅 月次レポート ›
                       </a>
                     ) : (
                       <span className="text-[0.7rem] text-slate-300 px-2">月次未生成</span>

@@ -88,14 +88,14 @@ export default function MonthlyDetailPage() {
               href="/history"
               className="text-slate-500 hover:text-slate-800 text-sm transition-colors shrink-0"
             >
-              ‹ 日次履歴
+              ‹ レポート一覧
             </a>
             <span className="text-slate-300 shrink-0">|</span>
             <a
               href="/monthly"
               className="text-slate-500 hover:text-slate-800 text-sm transition-colors shrink-0"
             >
-              月次一覧
+              月次レポート一覧
             </a>
             {monthLabel && (
               <>

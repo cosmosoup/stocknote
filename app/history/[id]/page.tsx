@@ -81,7 +81,7 @@ export default function HistoryDetailPage() {
               href="/history"
               className="text-slate-500 hover:text-slate-800 text-sm transition-colors shrink-0"
             >
-              ‹ 履歴一覧
+              ‹ レポート一覧
             </a>
             {dateStr && (
               <>

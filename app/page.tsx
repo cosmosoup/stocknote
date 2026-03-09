@@ -105,10 +105,7 @@ export default function HomePage() {
           </a>
           <div className="flex items-center gap-4">
             <a href="/history" className="text-slate-500 hover:text-slate-900 text-sm transition-colors">
-              履歴
-            </a>
-            <a href="/monthly" className="text-slate-500 hover:text-slate-900 text-sm transition-colors">
-              月次
+              レポート一覧
             </a>
             <a href="/portfolio" className="text-slate-500 hover:text-slate-900 text-sm transition-colors">
               銘柄管理
