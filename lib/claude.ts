@@ -105,7 +105,7 @@ export async function generateReport(
 
   const message = await getClient().messages.create({
     model: "claude-opus-4-6",
-    max_tokens: 4096,
+    max_tokens: 8192,
     messages: [
       {
         role: "user",
