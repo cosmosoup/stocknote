@@ -85,7 +85,11 @@ export default function MonthlyPage() {
               ‹ 最新レポート
             </a>
             <span className="text-slate-300">|</span>
-            <span className="text-slate-800 font-semibold text-sm">月次レポート</span>
+            <a href="/history" className="text-slate-500 hover:text-slate-900 text-sm transition-colors">
+              日次履歴
+            </a>
+            <span className="text-slate-300">|</span>
+            <span className="text-slate-800 font-semibold text-sm">月次サマリー</span>
           </div>
           <div className="flex items-center gap-4">
             <button

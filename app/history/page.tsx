@@ -11,6 +11,11 @@ interface HistoryItem {
   total_jpy: number;
 }
 
+interface MonthlyItem {
+  id: number;
+  month: string; // "2026-02"
+}
+
 function buildTrendChartUrl(history: HistoryItem[]): string {
   const sorted = [...history].reverse().slice(-60);
   const labels = sorted.map((h) =>
@@ -52,30 +57,45 @@ function fmtPct(n: number) {
   return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
 }
 
-// 月ごとにグループ化
-function groupByMonth(items: HistoryItem[]): { label: string; items: HistoryItem[] }[] {
-  const map = new Map<string, HistoryItem[]>();
+// 月ごとにグループ化 — monthKey (YYYY-MM) も一緒に返す
+function groupByMonth(items: HistoryItem[]): {
+  label: string;
+  monthKey: string;
+  items: HistoryItem[];
+}[] {
+  const map = new Map<string, { label: string; monthKey: string; items: HistoryItem[] }>();
   for (const item of items) {
     const d = new Date(item.created_at);
-    const key = d.toLocaleDateString("ja-JP", {
+    const monthKey = d.toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" }).slice(0, 7); // "YYYY-MM"
+    const label = d.toLocaleDateString("ja-JP", {
       timeZone: "Asia/Tokyo", year: "numeric", month: "long",
     });
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(item);
+    if (!map.has(monthKey)) map.set(monthKey, { label, monthKey, items: [] });
+    map.get(monthKey)!.items.push(item);
   }
-  return Array.from(map.entries()).map(([label, items]) => ({ label, items }));
+  return Array.from(map.values());
 }
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [monthlyMap, setMonthlyMap] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    fetch("/api/history")
-      .then((r) => r.json())
-      .then((data) => { setHistory(data as HistoryItem[]); setLoading(false); })
-      .catch(() => setLoading(false));
+    Promise.all([
+      fetch("/api/history").then((r) => r.json()),
+      fetch("/api/monthly/list").then((r) => r.json()),
+    ]).then(([hist, monthly]) => {
+      setHistory(hist as HistoryItem[]);
+      // month → id のマップを作成
+      const map = new Map<string, number>();
+      for (const m of (monthly as MonthlyItem[])) {
+        map.set(m.month, m.id);
+      }
+      setMonthlyMap(map);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
 
   const handleLogout = async () => {
@@ -96,7 +116,11 @@ export default function HistoryPage() {
               ‹ 最新レポート
             </a>
             <span className="text-slate-300">|</span>
-            <span className="text-slate-800 font-semibold text-sm">レポート履歴</span>
+            <span className="text-slate-800 font-semibold text-sm">日次履歴</span>
+            <span className="text-slate-300">|</span>
+            <a href="/monthly" className="text-slate-500 hover:text-slate-900 text-sm transition-colors">
+              月次サマリー
+            </a>
           </div>
           <button
             onClick={() => void handleLogout()}
@@ -128,64 +152,77 @@ export default function HistoryPage() {
             )}
 
             {/* 月別グループリスト */}
-            {groups.map((group) => (
-              <div key={group.label}>
-                {/* 月ラベル */}
-                <div className="flex items-center gap-3 mb-2 px-1">
-                  <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">
-                    {group.label}
-                  </span>
-                  <div className="flex-1 h-px bg-slate-200" />
-                  <span className="text-slate-400 text-xs">{group.items.length}件</span>
-                </div>
-
-                {/* エントリーカード */}
-                <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm divide-y divide-slate-100">
-                  {group.items.map((item) => {
-                    const d = new Date(item.created_at);
-                    const dateStr = d.toLocaleDateString("ja-JP", {
-                      timeZone: "Asia/Tokyo",
-                      month: "long", day: "numeric", weekday: "short",
-                    });
-                    const timeStr = d.toLocaleTimeString("ja-JP", {
-                      timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit",
-                    });
-                    return (
+            {groups.map((group) => {
+              const monthlyId = monthlyMap.get(group.monthKey);
+              return (
+                <div key={group.monthKey}>
+                  {/* 月ラベル + 月次サマリーリンク */}
+                  <div className="flex items-center gap-3 mb-2 px-1">
+                    <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                      {group.label}
+                    </span>
+                    <div className="flex-1 h-px bg-slate-200" />
+                    <span className="text-slate-400 text-xs">{group.items.length}件</span>
+                    {monthlyId ? (
                       <a
-                        key={item.id}
-                        href={`/history/${item.id}`}
-                        className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors group"
+                        href={`/monthly/${monthlyId}`}
+                        className="flex items-center gap-1 text-[0.7rem] font-medium text-[#008b8b] hover:text-[#006d6d] bg-[#e6f7f7] hover:bg-[#cceeee] px-2.5 py-0.5 rounded-full transition-colors"
                       >
-                        {/* 左: 日付 */}
-                        <div className="min-w-0">
-                          <div className="text-slate-800 font-medium text-sm">{dateStr}</div>
-                          <div className="text-slate-400 text-xs mt-0.5">{timeStr} JST</div>
-                        </div>
-
-                        {/* 右: 数値 + シェブロン */}
-                        <div className="flex items-center gap-5 shrink-0 ml-4">
-                          <div className="text-right">
-                            <div className="text-slate-400 text-xs mb-0.5">本日比</div>
-                            <div className={`font-mono font-semibold text-sm tabular-nums ${pctColor(item.daily_pct)}`}>
-                              {fmtPct(item.daily_pct)}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-slate-400 text-xs mb-0.5">評価額</div>
-                            <div className="font-mono text-slate-700 font-semibold text-sm tabular-nums">
-                              {item.total_jpy.toFixed(0)}万円
-                            </div>
-                          </div>
-                          <span className="text-slate-300 text-xl leading-none group-hover:text-[#008b8b] transition-colors">
-                            ›
-                          </span>
-                        </div>
+                        📅 月次サマリー ›
                       </a>
-                    );
-                  })}
+                    ) : (
+                      <span className="text-[0.7rem] text-slate-300 px-2">月次未生成</span>
+                    )}
+                  </div>
+
+                  {/* エントリーカード */}
+                  <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm divide-y divide-slate-100">
+                    {group.items.map((item) => {
+                      const d = new Date(item.created_at);
+                      const dateStr = d.toLocaleDateString("ja-JP", {
+                        timeZone: "Asia/Tokyo",
+                        month: "long", day: "numeric", weekday: "short",
+                      });
+                      const timeStr = d.toLocaleTimeString("ja-JP", {
+                        timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit",
+                      });
+                      return (
+                        <a
+                          key={item.id}
+                          href={`/history/${item.id}`}
+                          className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors group"
+                        >
+                          {/* 左: 日付 */}
+                          <div className="min-w-0">
+                            <div className="text-slate-800 font-medium text-sm">{dateStr}</div>
+                            <div className="text-slate-400 text-xs mt-0.5">{timeStr} JST</div>
+                          </div>
+
+                          {/* 右: 数値 + シェブロン */}
+                          <div className="flex items-center gap-5 shrink-0 ml-4">
+                            <div className="text-right">
+                              <div className="text-slate-400 text-xs mb-0.5">本日比</div>
+                              <div className={`font-mono font-semibold text-sm tabular-nums ${pctColor(item.daily_pct)}`}>
+                                {fmtPct(item.daily_pct)}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-slate-400 text-xs mb-0.5">評価額</div>
+                              <div className="font-mono text-slate-700 font-semibold text-sm tabular-nums">
+                                {item.total_jpy.toFixed(0)}万円
+                              </div>
+                            </div>
+                            <span className="text-slate-300 text-xl leading-none group-hover:text-[#008b8b] transition-colors">
+                              ›
+                            </span>
+                          </div>
+                        </a>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </>
         )}
       </div>

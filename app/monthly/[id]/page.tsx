@@ -85,10 +85,17 @@ export default function MonthlyDetailPage() {
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <a
+              href="/history"
+              className="text-slate-500 hover:text-slate-800 text-sm transition-colors shrink-0"
+            >
+              ‹ 日次履歴
+            </a>
+            <span className="text-slate-300 shrink-0">|</span>
+            <a
               href="/monthly"
               className="text-slate-500 hover:text-slate-800 text-sm transition-colors shrink-0"
             >
-              ‹ 月次一覧
+              月次一覧
             </a>
             {monthLabel && (
               <>
