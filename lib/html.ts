@@ -133,6 +133,8 @@ export function buildHtml(
     line-height: 1.7;
   }
   .container { max-width: 1000px; margin: 0 auto; padding: 28px 20px; }
+  /* ── テーブルスクロール ── */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
   /* ── ヒーローヘッダー（ダーク） ── */
   .header {
@@ -181,8 +183,16 @@ export function buildHtml(
     margin-top: 3px;
   }
   @media (max-width: 600px) {
-    .hero-grid { grid-template-columns: 1fr; gap: 14px; }
+    .container { padding: 12px; }
+    .header { padding: 16px; border-radius: 12px; margin-bottom: 14px; }
+    .header-top { margin-bottom: 12px; }
+    .hero-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
     .hero-item { padding: 0; border-left: none; }
+    .hero-item:nth-child(1) { grid-column: 1 / -1; }
+    .hero-value { font-size: 1.3rem; }
+    .section { padding: 14px; border-radius: 10px; margin-bottom: 12px; }
+    /* AI レポート内テーブルをスクロール可能に */
+    .report table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   }
 
   /* ── セクション ── */
@@ -386,19 +396,21 @@ export function buildHtml(
   <!-- 銘柄テーブル -->
   <div class="section">
     <div class="section-title">保有銘柄</div>
-    <table>
-      <thead>
-        <tr>
-          <th>銘柄</th>
-          <th>現在値</th>
-          <th>前日比</th>
-          <th>含損益</th>
-          <th>損益%</th>
-          <th>構成比</th>
-        </tr>
-      </thead>
-      <tbody>${tableRows}</tbody>
-    </table>
+    <div class="table-wrap">
+      <table style="min-width:480px">
+        <thead>
+          <tr>
+            <th>銘柄</th>
+            <th>現在値</th>
+            <th>前日比</th>
+            <th>含損益</th>
+            <th>損益%</th>
+            <th>構成比</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
   </div>
 
   <!-- AI分析レポート -->

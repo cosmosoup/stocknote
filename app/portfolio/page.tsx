@@ -221,14 +221,20 @@ export default function PortfolioPage() {
           </form>
         </div>
 
-        {/* 銘柄テーブル */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-sm">
-          {loading ? (
+        {/* 銘柄テーブル / カード */}
+        {loading ? (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
             <div className="text-slate-400 text-center py-8 text-sm">読み込み中...</div>
-          ) : items.length === 0 ? (
+          </div>
+        ) : items.length === 0 ? (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
             <div className="text-slate-400 text-center py-8 text-sm">銘柄が登録されていません。</div>
-          ) : (
-            <table className="w-full text-sm min-w-[640px]">
+          </div>
+        ) : (
+          <>
+            {/* PC: テーブル */}
+            <div className="hidden sm:block bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-sm">
+              <table className="w-full text-sm min-w-[640px]">
                 <thead>
                   <tr className="border-b border-slate-100">
                     {["ID", "ティッカー", "口数", "取得単価", "取得レート", "銘柄別メモ", ""].map((h) => (
@@ -267,8 +273,46 @@ export default function PortfolioPage() {
                   ))}
                 </tbody>
               </table>
-          )}
-        </div>
+            </div>
+
+            {/* モバイル: カード */}
+            <div className="sm:hidden space-y-2">
+              {items.map((item) => (
+                <div key={item.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-slate-900 font-bold text-base">{item.ticker}</span>
+                    <div className="flex gap-4">
+                      <button onClick={() => handleEdit(item)} className="text-[#008b8b] hover:text-[#005a5a] text-sm font-medium transition-colors">編集</button>
+                      <button onClick={() => void handleDelete(item.id!)} className="text-red-500 hover:text-red-700 text-sm font-medium transition-colors">削除</button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div>
+                      <div className="text-slate-400 text-xs mb-0.5">口数</div>
+                      <div className="text-slate-700 font-mono text-sm">{item.shares}</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-400 text-xs mb-0.5">取得単価</div>
+                      <div className="text-slate-700 font-mono text-sm">{item.cost_price}{isJp(item.ticker) ? " JPY" : " USD"}</div>
+                    </div>
+                    {item.cost_rate !== null && (
+                      <div>
+                        <div className="text-slate-400 text-xs mb-0.5">取得レート</div>
+                        <div className="text-slate-500 font-mono text-sm">{item.cost_rate} JPY/USD</div>
+                      </div>
+                    )}
+                  </div>
+                  {item.hypothesis && (
+                    <div className="mt-3 pt-3 border-t border-slate-100">
+                      <div className="text-slate-400 text-xs mb-0.5">メモ</div>
+                      <div className="text-slate-500 text-xs leading-relaxed">{item.hypothesis}</div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
