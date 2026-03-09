@@ -142,16 +142,15 @@ export default function MonthlyPage() {
             <p className="text-slate-400 text-xs">「今月を生成」ボタンで最初の月次レポートを作成できます。</p>
           </div>
         ) : (
-          <>
-            <div className="flex items-center gap-3 px-1">
+          <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+            {/* カード内ヘッダー */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
               <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">
                 月次レポート一覧
               </span>
-              <div className="flex-1 h-px bg-slate-200" />
               <span className="text-slate-400 text-xs">{list.length}件</span>
             </div>
-
-            <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100">
               {list.map((item) => (
                 <a
                   key={item.id}
@@ -197,7 +196,7 @@ export default function MonthlyPage() {
                 </a>
               ))}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
