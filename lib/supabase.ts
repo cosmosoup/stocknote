@@ -138,3 +138,73 @@ export async function getReportById(id: number): Promise<ReportDetail | null> {
   if (error || !data) return null;
   return data as ReportDetail;
 }
+
+// ─── 月次レポート関数 ───────────────────────────────────────────
+
+export interface MonthlyReportSummary {
+  id: number;
+  created_at: string;
+  month: string;
+  total_pct: number;
+  total_jpy: number;
+  monthly_pct: number;
+}
+
+export interface MonthlyReportDetail extends MonthlyReportSummary {
+  report_html: string;
+}
+
+/** 月次レポートを保存（同月はupsertで上書き） */
+export async function saveMonthlyReportLog(params: {
+  month: string;
+  total_pct: number;
+  total_jpy: number;
+  monthly_pct: number;
+  report_html: string;
+}): Promise<void> {
+  const db = getSupabase();
+  const { error } = await db
+    .from("monthly_report_log")
+    .upsert(
+      [{ ...params, created_at: new Date().toISOString() }],
+      { onConflict: "month" }
+    );
+  if (error) throw new Error(`Supabase monthly upsert error: ${error.message}`);
+}
+
+/** 最新の月次レポートを1件取得 */
+export async function getLatestMonthlyReport(): Promise<MonthlyReportDetail | null> {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("monthly_report_log")
+    .select("*")
+    .order("month", { ascending: false })
+    .limit(1)
+    .single();
+  if (error || !data) return null;
+  return data as MonthlyReportDetail;
+}
+
+/** 月次レポート一覧（一覧ページ用） */
+export async function getMonthlyReportList(limit = 24): Promise<MonthlyReportSummary[]> {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("monthly_report_log")
+    .select("id, created_at, month, total_pct, total_jpy, monthly_pct")
+    .order("month", { ascending: false })
+    .limit(limit);
+  if (error) return [];
+  return data as MonthlyReportSummary[];
+}
+
+/** 指定IDの月次レポート全データを取得 */
+export async function getMonthlyReportById(id: number): Promise<MonthlyReportDetail | null> {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("monthly_report_log")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error || !data) return null;
+  return data as MonthlyReportDetail;
+}

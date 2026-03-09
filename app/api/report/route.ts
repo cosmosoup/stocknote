@@ -7,6 +7,7 @@ import { buildCharts } from "@/lib/charts";
 import { buildHtml } from "@/lib/html";
 import { convertMdToHtml } from "@/lib/markdown";
 import { sendReportEmail } from "@/lib/email";
+import { appendDailyToSheets } from "@/lib/googleSheets";
 
 export const dynamic = "force-dynamic";
 // Vercel Pro以上でタイムアウト延長（Claude APIが最大90秒かかる）
@@ -50,7 +51,14 @@ export async function POST() {
       report_html: fullHtml,
     });
 
-    // 7. メール送信（失敗しても処理を続ける）
+    // 7. Google Sheets に日次データ追記（環境変数未設定時はスキップ）
+    try {
+      await appendDailyToSheets(market);
+    } catch (sheetsErr) {
+      console.error("Google Sheets append failed:", sheetsErr);
+    }
+
+    // 8. メール送信（失敗しても処理を続ける）
     const dateStr = new Date(market.generated_at).toLocaleDateString("ja-JP", {
       timeZone: "Asia/Tokyo",
     });

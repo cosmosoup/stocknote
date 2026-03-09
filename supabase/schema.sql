@@ -28,6 +28,20 @@ CREATE TABLE IF NOT EXISTS report_log (
 -- インデックス
 CREATE INDEX IF NOT EXISTS idx_report_log_created_at ON report_log (created_at DESC);
 
+-- 月次レポートログ
+CREATE TABLE IF NOT EXISTS monthly_report_log (
+  id           SERIAL PRIMARY KEY,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  month        TEXT NOT NULL,        -- '2026-02' 形式（YYYY-MM）
+  total_pct    NUMERIC,              -- 月末時点の通算損益%
+  total_jpy    NUMERIC,              -- 月末時点の評価額（万円）
+  monthly_pct  NUMERIC,              -- 当月騰落率%（期間初→期間末）
+  report_html  TEXT                  -- 生成HTML全文
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_monthly_report_log_month ON monthly_report_log (month);
+CREATE INDEX IF NOT EXISTS idx_monthly_report_log_created_at ON monthly_report_log (created_at DESC);
+
 -- ★ 同日upsert用マイグレーション（既存DBに対して実行してください）:
 -- 1. 同日重複がある場合は最新1件を残してから一意制約を追加
 --

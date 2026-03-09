@@ -41,7 +41,14 @@
       "Bash(node -e \"console.log\\(require\\(''crypto''\\).randomBytes\\(32\\).toString\\(''hex''\\)\\)\")",
       "Bash(powershell -Command \"Get-Process -Id \\(Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue\\).OwningProcess -ErrorAction SilentlyContinue | Select-Object Id, ProcessName\")",
       "Bash(powershell -Command \"Stop-Process -Id 3248 -Force\")",
-      "Bash(ls \"C:\\\\Users\\\\dai\\\\Claude\\\\stock\\\\public\"\" 2>/dev/null || echo \"no public dir \")"
+      "Bash(ls \"C:\\\\Users\\\\dai\\\\Claude\\\\stock\\\\public\"\" 2>/dev/null || echo \"no public dir \")",
+      "Bash(npm install nodemailer @types/nodemailer)",
+      "Bash(curl -X POST \"https://api.vercel.com/v1/integrations/deploy/prj_oBJZeYG4uOJXuoLyrXLWNoLfyZFN/J7PSInoi97\")",
+      "Bash(gh api user --jq '.email, .login, .name')",
+      "Bash(gh auth status)",
+      "Bash(curl -s -X POST \"https://api.vercel.com/v1/integrations/deploy/prj_oBJZeYG4uOJXuoLyrXLWNoLfyZFN/J7PSInoi97\")",
+      "Bash(python -m json.tool)",
+      "Bash(npm install googleapis --save)"
     ]
   }
 }
