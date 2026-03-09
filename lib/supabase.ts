@@ -61,22 +61,23 @@ export async function getLatestReport(): Promise<ReportLog | null> {
   return data as ReportLog;
 }
 
-/** 過去ログ一覧（グラフ用） */
+/** 過去ログ一覧（グラフ用）— 直近limit件を降順取得→時系列に戻す */
 export async function getHistoryData(limit = 30): Promise<HistoryPoint[]> {
   const db = getSupabase();
   const { data, error } = await db
     .from("report_log")
     .select("created_at, daily_pct, total_pct, total_jpy, market_data")
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false }) // 最新から取得して直近limit件を確実に得る
     .limit(limit);
   if (error) return [];
-  return (data as {
+  // 時系列順（古い→新しい）に並び替えて返す
+  return ([...(data as {
     created_at: string;
     daily_pct: number;
     total_pct: number;
     total_jpy: number;
     market_data: { sp500_chg?: number } | null;
-  }[]).map((r) => ({
+  }[])].reverse()).map((r) => ({
     date: r.created_at.slice(0, 10),
     daily_pct: r.daily_pct ?? 0,
     total_pct: r.total_pct,

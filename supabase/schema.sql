@@ -14,10 +14,11 @@ CREATE TABLE IF NOT EXISTS portfolio (
 -- ★ 既存テーブルに hypothesis 列を追加する場合（初回セットアップ済みの場合のみ実行）:
 -- ALTER TABLE portfolio ADD COLUMN IF NOT EXISTS hypothesis TEXT DEFAULT '';
 
--- 日次ログ（Report_Log相当）
+-- 日次ログ
 CREATE TABLE IF NOT EXISTS report_log (
   id           SERIAL PRIMARY KEY,
   created_at   TIMESTAMPTZ DEFAULT NOW(),
+  report_date  DATE,                  -- JST日付（同日upsert用）
   daily_pct    NUMERIC,               -- 前日比%
   total_pct    NUMERIC,               -- 通算損益%
   total_jpy    NUMERIC,               -- 評価額（万円）
@@ -27,6 +28,13 @@ CREATE TABLE IF NOT EXISTS report_log (
 
 -- インデックス
 CREATE INDEX IF NOT EXISTS idx_report_log_created_at ON report_log (created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_report_log_report_date ON report_log (report_date);
+
+-- アプリ設定（マクロ戦略など）
+CREATE TABLE IF NOT EXISTS settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL DEFAULT ''
+);
 
 -- 月次レポートログ
 CREATE TABLE IF NOT EXISTS monthly_report_log (
@@ -41,21 +49,6 @@ CREATE TABLE IF NOT EXISTS monthly_report_log (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_monthly_report_log_month ON monthly_report_log (month);
 CREATE INDEX IF NOT EXISTS idx_monthly_report_log_created_at ON monthly_report_log (created_at DESC);
-
--- ★ 同日upsert用マイグレーション（既存DBに対して実行してください）:
--- 1. 同日重複がある場合は最新1件を残してから一意制約を追加
---
--- DELETE FROM report_log
--- WHERE id NOT IN (
---   SELECT DISTINCT ON (created_at::DATE AT TIME ZONE 'Asia/Tokyo') id
---   FROM report_log
---   ORDER BY (created_at::DATE AT TIME ZONE 'Asia/Tokyo'), created_at DESC
--- );
---
--- 2. report_date 列を追加してUNIQUE制約を付与
--- ALTER TABLE report_log ADD COLUMN IF NOT EXISTS report_date DATE;
--- UPDATE report_log SET report_date = (created_at AT TIME ZONE 'Asia/Tokyo')::DATE WHERE report_date IS NULL;
--- CREATE UNIQUE INDEX IF NOT EXISTS idx_report_log_report_date ON report_log (report_date);
 
 -- ポートフォリオ初期データ（必要に応じて編集してください）
 -- INSERT INTO portfolio (ticker, shares, cost_price, cost_rate) VALUES

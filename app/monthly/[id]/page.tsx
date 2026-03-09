@@ -18,6 +18,7 @@ function ReportIframe({ html }: { html: string }) {
   return (
     <iframe
       srcDoc={html}
+      sandbox="allow-same-origin"
       style={{ width: "100%", height, border: "none", display: "block" }}
       onLoad={(e) => {
         const body = e.currentTarget.contentDocument?.body;
