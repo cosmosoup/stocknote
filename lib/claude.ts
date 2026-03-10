@@ -117,7 +117,7 @@ export async function generateReport(
   const userContent = buildPrompt(market, news, history, macroStrategy);
 
   const message = await getClient().messages.create({
-    model: "claude-opus-4-6",
+    model: "claude-sonnet-4-5",
     max_tokens: 8192,
     messages: [
       {
