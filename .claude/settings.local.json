@@ -48,7 +48,8 @@
       "Bash(gh auth status)",
       "Bash(curl -s -X POST \"https://api.vercel.com/v1/integrations/deploy/prj_oBJZeYG4uOJXuoLyrXLWNoLfyZFN/J7PSInoi97\")",
       "Bash(python -m json.tool)",
-      "Bash(npm install googleapis --save)"
+      "Bash(npm install googleapis --save)",
+      "Bash(curl -s -X POST https://stocknote-rust.vercel.app/api/report -H \"Content-Type: application/json\" --max-time 120)"
     ]
   }
 }
