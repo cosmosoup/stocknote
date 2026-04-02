@@ -96,7 +96,8 @@ function isJpyTicker(ticker: string): boolean {
 
 /** 全市場データを取得・計算して MarketData を返す */
 export async function fetchMarketData(
-  portfolio: PortfolioItem[]
+  portfolio: PortfolioItem[],
+  cashJpy = 0
 ): Promise<MarketData> {
   // --- USD/JPY と Fear&Greed は並行取得 ---
   const [usdjpy, fear_greed] = await Promise.all([
@@ -177,15 +178,16 @@ export async function fetchMarketData(
     };
   });
 
-  // 合計評価額で構成比を計算
+  // 合計評価額で構成比を計算（キャッシュを含む）
   const total_value_jpy = evaluated.reduce(
     (sum, e) => sum + e.current_price_jpy * e.shares,
     0
   );
+  const grand_total_jpy = total_value_jpy + cashJpy;
   evaluated.forEach((e) => {
     e.weight =
-      total_value_jpy > 0
-        ? ((e.current_price_jpy * e.shares) / total_value_jpy) * 100
+      grand_total_jpy > 0
+        ? ((e.current_price_jpy * e.shares) / grand_total_jpy) * 100
         : 0;
   });
 
@@ -221,6 +223,7 @@ export async function fetchMarketData(
     oil_chg,
     fear_greed,
     portfolio: evaluated,
+    cash_jpy: cashJpy,
     total_jpy,
     total_cost_jpy,
     daily_gain_jpy,

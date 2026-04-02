@@ -35,7 +35,8 @@ export interface MarketData {
   oil_chg: number;          // WTI前日比%
   fear_greed: number;       // Fear & Greed Index
   portfolio: PortfolioEval[];
-  total_jpy: number;        // 合計評価額（万円）
+  cash_jpy: number;         // キャッシュ残高（円）
+  total_jpy: number;        // 株式評価額（万円、キャッシュ除く）
   total_cost_jpy: number;   // 合計取得コスト（万円）
   daily_gain_jpy: number;   // 本日損益（万円）
   daily_pct: number;        // 本日損益%

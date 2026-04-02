@@ -15,9 +15,16 @@ export default function PortfolioPage() {
   const [macroSaving, setMacroSaving] = useState(false);
   const [macroSaved, setMacroSaved] = useState(false);
 
+  const [cashJpy, setCashJpy] = useState<number>(0);
+  const [cashSaving, setCashSaving] = useState(false);
+  const [cashSaved, setCashSaved] = useState(false);
+
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json())
-      .then((d: { macro_strategy?: string }) => setMacroStrategy(d.macro_strategy ?? ""))
+      .then((d: { macro_strategy?: string; cash_jpy?: number }) => {
+        setMacroStrategy(d.macro_strategy ?? "");
+        setCashJpy(d.cash_jpy ?? 0);
+      })
       .catch(() => {});
   }, []);
 
@@ -33,6 +40,20 @@ export default function PortfolioPage() {
       setMacroSaved(true);
       setTimeout(() => setMacroSaved(false), 2000);
     } finally { setMacroSaving(false); }
+  };
+
+  const handleCashSave = async () => {
+    setCashSaving(true);
+    setCashSaved(false);
+    try {
+      await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cash_jpy: cashJpy }),
+      });
+      setCashSaved(true);
+      setTimeout(() => setCashSaved(false), 2000);
+    } finally { setCashSaving(false); }
   };
 
   const [items, setItems] = useState<PortfolioItem[]>([]);
@@ -132,6 +153,44 @@ export default function PortfolioPage() {
             placeholder={`例：\n【投資スタンス】\n1. Global Macro: 米国株(S&P500)は割高アンダーウェイト。割安な新興国（インド・南米）をオーバーウェイト。\n2. 日本株: 円キャリートレード巻き戻しリスクを警戒。ポジション最小限。`}
             className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b] resize-y placeholder:text-slate-400 leading-relaxed"
           />
+        </div>
+
+        {/* キャッシュ残高 */}
+        <div className="bg-white rounded-xl p-5 border border-[#b2e0e0] shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-[#008b8b] font-semibold text-sm uppercase tracking-wider">
+                💴 キャッシュ残高
+              </h2>
+              <p className="text-slate-400 text-xs mt-1">
+                円建てキャッシュ残高。構成比チャートとAI分析に反映されます。
+              </p>
+            </div>
+            <button
+              onClick={() => void handleCashSave()}
+              disabled={cashSaving}
+              className="px-4 py-1.5 bg-[#008b8b] hover:bg-[#006d6d] disabled:bg-slate-200 text-white text-sm rounded-lg font-medium transition-colors whitespace-nowrap"
+            >
+              {cashSaving ? "保存中…" : cashSaved ? "✓ 保存済" : "保存"}
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              value={cashJpy}
+              onChange={(e) => setCashJpy(Math.max(0, parseInt(e.target.value) || 0))}
+              step="10000"
+              min="0"
+              placeholder="0"
+              className="w-52 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b] font-mono"
+            />
+            <span className="text-slate-500 text-sm">円</span>
+            {cashJpy > 0 && (
+              <span className="text-slate-400 text-xs">
+                ({(cashJpy / 10000).toFixed(1)}万円)
+              </span>
+            )}
+          </div>
         </div>
 
         {/* 銘柄追加/編集 */}

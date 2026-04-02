@@ -111,6 +111,27 @@ export async function getMacroStrategy(): Promise<string> {
   return (data as { value: string }).value;
 }
 
+/** キャッシュ残高（円）を取得 */
+export async function getCashJpy(): Promise<number> {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("settings")
+    .select("value")
+    .eq("key", "cash_jpy")
+    .single();
+  if (error || !data) return 0;
+  return parseInt((data as { value: string }).value, 10) || 0;
+}
+
+/** キャッシュ残高（円）を保存 */
+export async function saveCashJpy(value: number): Promise<void> {
+  const db = getSupabase();
+  const { error } = await db
+    .from("settings")
+    .upsert([{ key: "cash_jpy", value: String(Math.max(0, value)) }], { onConflict: "key" });
+  if (error) throw new Error(`Supabase cash_jpy error: ${error.message}`);
+}
+
 /** マクロ投資戦略を保存（upsert） */
 export async function saveMacroStrategy(value: string): Promise<void> {
   const db = getSupabase();

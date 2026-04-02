@@ -35,14 +35,22 @@ function buildPrompt(
   // ポートフォリオ
   const pfLines = p
     .map((e) => {
-      const base = `- ${e.ticker}: 現在値 ${e.is_jpy ? e.current_price.toFixed(0) + "円" : e.current_price.toFixed(2) + "USD"} / 前日比 ${e.change_pct >= 0 ? "+" : ""}${e.change_pct.toFixed(2)}% / 含損益 ${e.gain_pct >= 0 ? "+" : ""}${e.gain_pct.toFixed(1)}% / 構成比 ${e.weight.toFixed(1)}%`;
+      const base = `- ${e.ticker}: 現在値 ${e.is_jpy ? e.current_price.toFixed(0) + "円" : e.current_price.toFixed(2) + "USD"} / 前日比 ${e.change_pct >= 0 ? "+" : ""}${e.change_pct.toFixed(2)}% / 含損益 ${e.gain_pct >= 0 ? "+" : ""}${e.gain_pct.toFixed(1)}% (${e.gain_jpy >= 0 ? "+" : ""}${e.gain_jpy.toFixed(0)}円) / 構成比 ${e.weight.toFixed(1)}%`;
       return e.hypothesis ? `${base} | 投資仮説: ${e.hypothesis}` : base;
     })
     .join("\n");
 
+  // キャッシュ情報
+  const cashJpy = market.cash_jpy ?? 0;
+  const totalIncCash = market.total_jpy * 10000 + cashJpy;
+  const cashRatio = totalIncCash > 0 ? (cashJpy / totalIncCash) * 100 : 0;
+  const cashSection = cashJpy > 0
+    ? `\nキャッシュ: ${(cashJpy / 10000).toFixed(1)}万円（ポートフォリオ全体の${cashRatio.toFixed(1)}%）`
+    : "";
+
   const pfSection = `
 ## ポートフォリオ
-評価額: ${market.total_jpy.toFixed(0)}万円
+株式評価額: ${market.total_jpy.toFixed(0)}万円${cashSection}
 本日損益: ${market.daily_gain_jpy >= 0 ? "+" : ""}${market.daily_gain_jpy.toFixed(1)}万円 (${market.daily_pct >= 0 ? "+" : ""}${market.daily_pct.toFixed(2)}%)
 通算損益: ${market.total_gain_jpy >= 0 ? "+" : ""}${market.total_gain_jpy.toFixed(1)}万円 (${market.total_pct >= 0 ? "+" : ""}${market.total_pct.toFixed(2)}%)
 
@@ -97,11 +105,23 @@ export async function generateReport(
 - 優良な個別株・インデックスは短期下落で売ることを推奨しない。耐えることが原則
 - ただし、企業の競争優位・財務健全性・成長ストーリーが崩れた場合は見直しを勧める
 
-【分析の深度要件】
-- 単なる「今日の値動きの説明」は不要。その数値が示す中長期的な意味を掘り下げること
-- 「なぜこの銘柄を持つのか」「何が変わったら売るのか」という視点で各銘柄を評価すること
-- マクロ指標（VIX・金利・為替）が中長期ポートフォリオに与える実質的なインパクトを分析すること
-- 表面的な感想ではなく、具体的な数値・歴史的文脈・セクター特性に基づいた鋭い考察を書くこと
+【分析の質要件（必ず全項目を守ること）】
+
+■ リスク分析は必ずポートフォリオ固有の数値で定量化すること
+  - NG: 「VIXが高水準で不安定」「金利上昇リスクがある」という教科書的記述
+  - OK: 「VIX30超が継続した場合、過去の同水準局面では本ポートフォリオ規模で△XX万円相当の下落リスク（構成銘柄のベータ加重で試算）」のように銘柄・金額を結びつけた具体的試算
+  - 為替（USD/JPY）の変動が円建て評価額に与える影響も数値で示すこと
+
+■ マクロ仮説との整合性チェックは単一の明確な判定を下すこと
+  - NG: 「一方では〜、他方では〜」という両論併記・留保表現
+  - OK: 冒頭に【支持】【矛盾】【中立】のいずれか一語で判定し、その根拠を2〜3文で述べる。曖昧な表現は禁止
+  - 現在の市場データと投資戦略・マクロ仮説（オーナー設定）を突き合わせて、「仮説は今の局面に有効か？」を判定すること
+
+■ 今週のアクション優先度は具体的なトリガー条件付きで記述すること
+  - NG: 「引き続き注視する」「動向を見守る」「モニタリングが必要」という表現は絶対に使わない
+  - OK: 「[銘柄/指標]が[具体的な水準・条件]になった場合、[具体的なアクション]を検討」という形式で書く
+  - キャッシュ保有比率が高い場合は、どの条件で・どの銘柄に・どの程度再投資するかの判断基準を示すこと
+  - 最低2件、最大4件のアクション項目を書くこと
 
 【出力形式】
 - 最初の出力は必ず ## から始める（タイトル行・日時行を先頭に出さない）

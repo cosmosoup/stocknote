@@ -1,4 +1,4 @@
-import type { PortfolioEval, HistoryPoint, Charts } from "@/types";
+import type { PortfolioEval, HistoryPoint, Charts, MarketData } from "@/types";
 
 const QUICKCHART_BASE = "https://quickchart.io/chart";
 
@@ -13,10 +13,10 @@ function toUrl(config: object, width = 700, height = 300): string {
 }
 
 /** 構成比 横棒グラフ（ドーナツ置換） */
-function buildAllocationBar(portfolio: PortfolioEval[]): string {
+function buildAllocationBar(portfolio: PortfolioEval[], cashJpy = 0, totalJpyWan = 0): string {
   const sorted = [...portfolio].sort((a, b) => b.weight - a.weight);
-  const top = sorted.slice(0, 12);
-  const othersWeight = sorted.slice(12).reduce((s, e) => s + e.weight, 0);
+  const top = sorted.slice(0, 11); // キャッシュ用に1枠空ける
+  const othersWeight = sorted.slice(11).reduce((s, e) => s + e.weight, 0);
 
   const labels = top.map((e) => e.ticker);
   const data = top.map((e) => parseFloat(e.weight.toFixed(1)));
@@ -25,6 +25,21 @@ function buildAllocationBar(portfolio: PortfolioEval[]): string {
     data.push(parseFloat(othersWeight.toFixed(1)));
   }
 
+  // キャッシュを追加（保有がある場合）
+  if (cashJpy > 0 && totalJpyWan > 0) {
+    const grandTotalJpy = totalJpyWan * 10000 + cashJpy;
+    const cashWeight = parseFloat(((cashJpy / grandTotalJpy) * 100).toFixed(1));
+    if (cashWeight > 0.1) {
+      labels.push("キャッシュ");
+      data.push(cashWeight);
+    }
+  }
+
+  // キャッシュは薄いグレーで表示
+  const bgColors = labels.map((l, i) =>
+    l === "キャッシュ" ? "#cbd5e1" : COLORS[i % COLORS.length]
+  );
+
   const config = {
     type: "bar",
     data: {
@@ -32,7 +47,7 @@ function buildAllocationBar(portfolio: PortfolioEval[]): string {
       datasets: [
         {
           data,
-          backgroundColor: COLORS.slice(0, labels.length),
+          backgroundColor: bgColors,
           borderWidth: 0,
           borderRadius: 4,
         },
@@ -174,10 +189,11 @@ function buildCompare(history: HistoryPoint[]): string {
 /** 全チャートURLを生成 */
 export function buildCharts(
   portfolio: PortfolioEval[],
-  history: HistoryPoint[]
+  history: HistoryPoint[],
+  market?: Pick<MarketData, "cash_jpy" | "total_jpy">
 ): Charts {
   return {
-    alloc: buildAllocationBar(portfolio),
+    alloc: buildAllocationBar(portfolio, market?.cash_jpy ?? 0, market?.total_jpy ?? 0),
     bar: buildBar(portfolio),
     compare: history.length >= 2 ? buildCompare(history) : "",
   };
