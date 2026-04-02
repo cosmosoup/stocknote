@@ -21,6 +21,9 @@ function buildPrompt(
   });
 
   // 市場概況
+  const brentWtiSpread = market.brent > 0 && market.oil > 0
+    ? ` / スプレッド +${(market.brent - market.oil).toFixed(2)}`
+    : "";
   const marketSection = `
 ## 市場データ (${dateStr})
 - S&P500: ${market.sp500.toFixed(0)} (${market.sp500_chg >= 0 ? "+" : ""}${market.sp500_chg.toFixed(2)}%)
@@ -28,8 +31,10 @@ function buildPrompt(
 - VIX: ${market.vix.toFixed(2)}
 - 米10年金利: ${market.tnx.toFixed(3)}%
 - USD/JPY: ${market.usdjpy.toFixed(2)}
+- ドル指数(DXY): ${market.dxy.toFixed(2)}
 - Gold: ${market.gold.toFixed(0)} USD/oz (${market.gold_chg >= 0 ? "+" : ""}${market.gold_chg.toFixed(2)}%)
 - WTI原油: ${market.oil.toFixed(2)} USD/bbl (${market.oil_chg >= 0 ? "+" : ""}${market.oil_chg.toFixed(2)}%)
+- Brent原油: ${market.brent.toFixed(2)} USD/bbl (${market.brent_chg >= 0 ? "+" : ""}${market.brent_chg.toFixed(2)}%)${brentWtiSpread}
 - Fear&Greed Index: ${market.fear_greed}/100`;
 
   // ポートフォリオ
@@ -64,7 +69,7 @@ ${pfLines}`;
         news
           .map(
             (n, i) =>
-              `[${i + 1}] [${n.source}] ${n.title}\n${n.summary.slice(0, 150)}`
+              `[${i + 1}] [${n.source}] ${n.title}\n${n.summary.slice(0, 280)}`
           )
           .join("\n\n")
       : "";
@@ -107,10 +112,17 @@ export async function generateReport(
 
 【分析の質要件（必ず全項目を守ること）】
 
+■ ニュースと市場データを必ず連結して読むこと
+  - NG: ニュースを列挙するだけ、指標を羅列するだけ、両者が別々に浮いている記述
+  - OK: 「[ニュースX]が示す地政学リスクは[指標Y]の動きに既に織り込まれており、その波及先として[セクターZ]が〜」のように因果の連鎖を明示する
+  - 要人発言（Fed議長・財務長官・OPEC閣僚・各国首脳など）がニュースに含まれる場合、必ずその政策的含意とポートフォリオへの影響を述べること
+  - 地政学イベントは「事象→コモディティ/金利/為替への影響経路→保有銘柄への波及」の順で論じること
+  - 市場が「現時点で何を織り込んでいるか」と「まだ織り込んでいないリスク」を区別して記述すること
+
 ■ リスク分析は必ずポートフォリオ固有の数値で定量化すること
   - NG: 「VIXが高水準で不安定」「金利上昇リスクがある」という教科書的記述
   - OK: 「VIX30超が継続した場合、過去の同水準局面では本ポートフォリオ規模で△XX万円相当の下落リスク（構成銘柄のベータ加重で試算）」のように銘柄・金額を結びつけた具体的試算
-  - 為替（USD/JPY）の変動が円建て評価額に与える影響も数値で示すこと
+  - 為替（USD/JPY）・DXY・Brent/WTIスプレッドなど複数指標を組み合わせて現局面を立体的に評価すること
 
 ■ マクロ仮説との整合性チェックは単一の明確な判定を下すこと
   - NG: 「一方では〜、他方では〜」という両論併記・留保表現

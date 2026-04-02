@@ -34,6 +34,9 @@ export interface MarketData {
   gold_chg: number;         // Gold前日比%
   oil: number;              // WTI原油（USD/barrel）
   oil_chg: number;          // WTI前日比%
+  brent: number;            // Brent原油（USD/barrel）
+  brent_chg: number;        // Brent前日比%
+  dxy: number;              // ドル指数（DXY）
   fear_greed: number;       // Fear & Greed Index
   portfolio: PortfolioEval[];
   cash_jpy: number;         // キャッシュ残高（円）

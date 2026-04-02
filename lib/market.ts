@@ -182,7 +182,9 @@ export async function fetchMarketData(
     vix: "%5EVIX",      // ^VIX
     tnx: "%5ETNX",      // ^TNX (米10年金利)
     gold: "GC%3DF",     // GC=F
-    oil: "CL%3DF",      // CL=F
+    oil: "CL%3DF",      // CL=F (WTI原油)
+    brent: "BZ%3DF",    // BZ=F (Brent原油)
+    dxy: "DX%3DF",      // DX=F (ドル指数)
   };
 
   // 指数と全ポートフォリオ銘柄を並行取得
@@ -216,6 +218,9 @@ export async function fetchMarketData(
   const gold_chg = getIdx("gold")?.change_pct ?? 0;
   const oil = getIdx("oil")?.price ?? 0;
   const oil_chg = getIdx("oil")?.change_pct ?? 0;
+  const brent = getIdx("brent")?.price ?? 0;
+  const brent_chg = getIdx("brent")?.change_pct ?? 0;
+  const dxy = getIdx("dxy")?.price ?? 0;
 
   // --- セクター情報を並行取得 ---
   const portfolioYahooSymbols = portfolio.map((p) => toYahooSymbol(p.ticker));
@@ -300,6 +305,9 @@ export async function fetchMarketData(
     gold_chg,
     oil,
     oil_chg,
+    brent,
+    brent_chg,
+    dxy,
     fear_greed,
     portfolio: evaluated,
     cash_jpy: cashJpy,

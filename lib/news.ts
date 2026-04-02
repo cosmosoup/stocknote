@@ -10,21 +10,20 @@ const parser = new Parser({
 });
 
 const RSS_FEEDS = [
-  {
-    url: "https://feeds.reuters.com/reuters/businessNews",
-    source: "Reuters Business",
-  },
-  {
-    url: "https://feeds.reuters.com/reuters/marketsNews",
-    source: "Reuters Markets",
-  },
-  {
-    url: "https://www.nhk.or.jp/rss/news/cat5.xml",
-    source: "NHK経済",
-  },
+  // マーケット・経済全般
+  { url: "https://feeds.reuters.com/reuters/marketsNews",          source: "Reuters Markets" },
+  { url: "https://feeds.reuters.com/reuters/businessNews",         source: "Reuters Business" },
+  { url: "https://feeds.reuters.com/reuters/topNews",              source: "Reuters Top News" },
+  // CNBC（Fed動向・経済指標に強い）
+  { url: "https://www.cnbc.com/id/10000664/device/rss/rss.html",   source: "CNBC Finance" },
+  { url: "https://www.cnbc.com/id/20910258/device/rss/rss.html",   source: "CNBC Economy" },
+  // MarketWatch（相場解説・要人発言に強い）
+  { url: "https://feeds.marketwatch.com/marketwatch/topstories/",  source: "MarketWatch" },
+  // Yahoo Finance（幅広いカバレッジ）
+  { url: "https://finance.yahoo.com/news/rssindex",                source: "Yahoo Finance" },
 ];
 
-/** RSSからニュース最新12件を取得 */
+/** RSSからニュース最新20件を取得 */
 export async function fetchNews(): Promise<NewsItem[]> {
   const results = await Promise.allSettled(
     RSS_FEEDS.map(async ({ url, source }) => {
@@ -45,14 +44,14 @@ export async function fetchNews(): Promise<NewsItem[]> {
     }
   }
 
-  // 最新12件に絞る（日時でソート）
+  // 最新20件に絞る（日時でソート）
   allNews.sort((a, b) => {
     const da = a.pubDate ? new Date(a.pubDate).getTime() : 0;
     const db = b.pubDate ? new Date(b.pubDate).getTime() : 0;
     return db - da;
   });
 
-  return allNews.slice(0, 12);
+  return allNews.slice(0, 20);
 }
 
 /** ニュースをAIプロンプト用の文字列に変換 */
