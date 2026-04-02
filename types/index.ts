@@ -18,6 +18,7 @@ export interface PortfolioEval extends PortfolioItem {
   gain_pct: number;          // 含損益%（通算）
   weight: number;            // ポートフォリオ構成比%
   is_jpy: boolean;           // 日本株フラグ
+  sector?: string;           // セクター（日本語）
 }
 
 // 市場データ
@@ -57,7 +58,8 @@ export interface NewsItem {
 export interface Charts {
   alloc: string;    // 構成比横棒
   bar: string;      // 銘柄別損益横棒
-  compare: string;  // ポートフォリオ vs S&P500
+  compare: string;  // ポートフォリオ vs S&P500 + ドローダウン
+  sector: string;   // セクター別配分
 }
 
 // 過去ログ（Report_Log相当）

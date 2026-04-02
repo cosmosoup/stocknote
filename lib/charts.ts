@@ -118,21 +118,24 @@ function buildBar(portfolio: PortfolioEval[]): string {
   return toUrl(config, 700, height);
 }
 
-/** ポートフォリオ vs S&P500 累積リターン比較 */
+/** ポートフォリオ vs S&P500 累積リターン + ドローダウン */
 function buildCompare(history: HistoryPoint[]): string {
-  // 複利で累積リターンを計算: (1 + r1/100) × (1 + r2/100) × … - 1
   let portMul = 1;
   let sp500Mul = 1;
+  let peakMul = 1;
   const portData: number[] = [];
   const sp500Data: number[] = [];
+  const drawdownData: number[] = [];
   const labels: string[] = [];
 
   for (const h of history) {
     portMul *= 1 + (h.daily_pct ?? 0) / 100;
     sp500Mul *= 1 + (h.sp500_chg ?? 0) / 100;
+    if (portMul > peakMul) peakMul = portMul;
+
     portData.push(parseFloat(((portMul - 1) * 100).toFixed(2)));
     sp500Data.push(parseFloat(((sp500Mul - 1) * 100).toFixed(2)));
-    // MM/DD 形式
+    drawdownData.push(parseFloat(((portMul / peakMul - 1) * 100).toFixed(2)));
     labels.push(h.date.slice(5).replace("-", "/"));
   }
 
@@ -145,11 +148,12 @@ function buildCompare(history: HistoryPoint[]): string {
           label: "ポートフォリオ",
           data: portData,
           borderColor: "#008b8b",
-          backgroundColor: "rgba(0,139,139,0.08)",
+          backgroundColor: "rgba(0,139,139,0.06)",
           fill: true,
           tension: 0.3,
           pointRadius: 2,
           borderWidth: 2,
+          yAxisID: "y",
         },
         {
           label: "S&P 500",
@@ -161,6 +165,19 @@ function buildCompare(history: HistoryPoint[]): string {
           pointRadius: 2,
           borderWidth: 1.5,
           borderDash: [5, 3],
+          yAxisID: "y",
+        },
+        {
+          label: "ドローダウン",
+          data: drawdownData,
+          borderColor: "rgba(239,68,68,0.6)",
+          backgroundColor: "rgba(239,68,68,0.08)",
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          borderWidth: 1,
+          borderDash: [3, 2],
+          yAxisID: "y",
         },
       ],
     },
@@ -183,7 +200,46 @@ function buildCompare(history: HistoryPoint[]): string {
     },
   };
 
-  return toUrl(config, 900, 260);
+  return toUrl(config, 900, 280);
+}
+
+/** セクター別配分 横棒グラフ */
+function buildSectorBar(portfolio: PortfolioEval[], cashJpy = 0, totalJpyWan = 0): string {
+  const grandTotalJpy = totalJpyWan * 10000 + cashJpy;
+  if (grandTotalJpy <= 0) return "";
+
+  const sectorTotals = new Map<string, number>();
+  for (const e of portfolio) {
+    const s = e.sector ?? "その他";
+    const val = e.current_price_jpy * e.shares;
+    sectorTotals.set(s, (sectorTotals.get(s) ?? 0) + val);
+  }
+  if (cashJpy > 0) {
+    sectorTotals.set("キャッシュ", (sectorTotals.get("キャッシュ") ?? 0) + cashJpy);
+  }
+
+  const entries = [...sectorTotals.entries()].sort(([, a], [, b]) => b - a);
+  const labels = entries.map(([l]) => l);
+  const data = entries.map(([, v]) => parseFloat(((v / grandTotalJpy) * 100).toFixed(1)));
+  const bgColors = labels.map((l, i) =>
+    l === "キャッシュ" ? "#cbd5e1" : COLORS[i % COLORS.length]
+  );
+
+  const config = {
+    type: "bar",
+    data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 0, borderRadius: 4 }] },
+    options: {
+      indexAxis: "y",
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { color: "#e2e8f0" } },
+        y: { ticks: { color: "#334155", font: { size: 11 } }, grid: { display: false } },
+      },
+    },
+  };
+
+  const height = Math.max(180, entries.length * 34 + 50);
+  return toUrl(config, 700, height);
 }
 
 /** 全チャートURLを生成 */
@@ -196,5 +252,6 @@ export function buildCharts(
     alloc: buildAllocationBar(portfolio, market?.cash_jpy ?? 0, market?.total_jpy ?? 0),
     bar: buildBar(portfolio),
     compare: history.length >= 2 ? buildCompare(history) : "",
+    sector: buildSectorBar(portfolio, market?.cash_jpy ?? 0, market?.total_jpy ?? 0),
   };
 }

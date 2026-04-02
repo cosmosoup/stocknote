@@ -43,6 +43,40 @@ function fearGreedColor(score: number): string {
   return "#7c3aed";
 }
 
+/** Fear&Greed 半円SVGメーター */
+function buildFearGreedMeter(score: number): string {
+  const cx = 100, cy = 88, r = 70, sw = 17;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+
+  // θ=0が左端、θ=180が右端、θ=90が頂点 の半円上の座標
+  const pt = (theta: number, radius = r) => ({
+    x: +(cx - radius * Math.cos(toRad(theta))).toFixed(1),
+    y: +(cy - radius * Math.sin(toRad(theta))).toFixed(1),
+  });
+
+  // large-arc=0, sweep=0 で上半円を通る弧（< 180°）
+  const arc = (t1: number, t2: number, color: string) => {
+    const p1 = pt(t1), p2 = pt(t2);
+    return `<path d="M${p1.x} ${p1.y}A${r} ${r} 0 0 0 ${p2.x} ${p2.y}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="butt"/>`;
+  };
+
+  const needleAngle = Math.min(180, Math.max(0, score * 1.8));
+  const tip = pt(needleAngle, r - 8);
+  const scoreColor =
+    score < 25 ? "#7c3aed" : score < 45 ? "#3b82f6" : score < 55 ? "#94a3b8" : score < 75 ? "#f59e0b" : "#ef4444";
+
+  return `<svg viewBox="0 0 200 120" style="width:100%;display:block">
+    ${arc(0, 45, "#7c3aed")}
+    ${arc(45, 81, "#3b82f6")}
+    ${arc(81, 99, "#94a3b8")}
+    ${arc(99, 135, "#f59e0b")}
+    ${arc(135, 180, "#ef4444")}
+    <line x1="${cx}" y1="${cy}" x2="${tip.x}" y2="${tip.y}" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="5" fill="#0f172a"/>
+    <text x="${cx}" y="${cy + 26}" text-anchor="middle" font-size="22" font-weight="700" fill="${scoreColor}" font-family="-apple-system,sans-serif">${score}</text>
+  </svg>`;
+}
+
 /** HTML全体を組み立てる */
 export function buildHtml(
   market: MarketData,
@@ -74,8 +108,22 @@ export function buildHtml(
     { label: "米10年金利",     value: `${fmt(market.tnx, 3)}%`,  chg: null,              sub: null,    color: "#64748b" },
   ];
 
+  // 為替感応度：USD建て保有合計 → ±1円で±XX万円
+  const usdHoldingsUsd = market.portfolio
+    .filter((e) => !e.is_jpy)
+    .reduce((sum, e) => sum + e.current_price * e.shares, 0);
+  const forexImpactWan = usdHoldingsUsd / 10000;
+
   const marketHtml = marketItems.map((m) => {
     const valColor = m.color ?? "#1e293b";
+    if (m.label === "Fear & Greed") {
+      return `
+    <div class="mkt-card">
+      <div class="mkt-label">Fear &amp; Greed</div>
+      ${buildFearGreedMeter(market.fear_greed)}
+      <div class="mkt-chg" style="color:${fgColor};margin-top:-2px">${escHtml(fgLabel)}</div>
+    </div>`;
+    }
     return `
     <div class="mkt-card">
       <div class="mkt-label">${escHtml(m.label)}</div>
@@ -84,6 +132,15 @@ export function buildHtml(
       ${m.sub ? `<div class="mkt-chg" style="color:${valColor};opacity:0.8">${escHtml(m.sub)}</div>` : ""}
     </div>`;
   }).join("");
+
+  const forexHtml = usdHoldingsUsd > 0 ? `
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9">
+      <span style="display:inline-flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:7px 14px;font-size:0.8rem">
+        <span style="color:#94a3b8;font-size:0.68rem;letter-spacing:0.06em;text-transform:uppercase">為替感応度</span>
+        <span style="color:#1e293b;font-weight:600">USD/JPY ±1円 → ±${fmt(forexImpactWan, 1)}万円</span>
+        <span style="color:#94a3b8;font-size:0.72rem">（USD建て: ${fmt(usdHoldingsUsd, 0)} USD）</span>
+      </span>
+    </div>` : "";
 
   // ── 銘柄テーブル（構成比降順） ──
   const sorted = [...market.portfolio].sort((a, b) => b.weight - a.weight);
@@ -378,6 +435,7 @@ export function buildHtml(
   <div class="section">
     <div class="section-title">Market Overview</div>
     <div class="mkt-grid">${marketHtml}</div>
+    ${forexHtml}
   </div>
 
   <!-- グラフ -->
@@ -391,6 +449,10 @@ export function buildHtml(
       <div class="chart-label">銘柄別 含み損益%</div>
       <img src="${charts.bar}" alt="銘柄別含損益" class="chart-img">
     </div>
+    ${charts.sector ? `<div class="chart-block">
+      <div class="chart-label">セクター別配分</div>
+      <img src="${charts.sector}" alt="セクター別配分" class="chart-img">
+    </div>` : ""}
     ${chartCompare}
   </div>
 

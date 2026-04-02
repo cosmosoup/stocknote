@@ -13,6 +13,16 @@ interface YahooResponse {
   };
 }
 
+// Yahoo Finance v7 quote API（セクター取得用）
+interface YahooV7Quote {
+  symbol: string;
+  quoteType?: string;
+  sector?: string;
+}
+interface YahooV7Response {
+  quoteResponse?: { result?: YahooV7Quote[] };
+}
+
 /** Yahoo Finance v8 APIで1銘柄の価格・前日比を取得 */
 async function fetchYahooQuote(
   symbol: string
@@ -82,6 +92,48 @@ async function fetchFearGreed(): Promise<number> {
   }
 }
 
+/** セクター名を日本語に正規化 */
+function normalizeSector(sector?: string, quoteType?: string, isJpy = false): string {
+  if (quoteType === "ETF" || quoteType === "MUTUALFUND") return "ETF・ファンド";
+  if (!sector) return isJpy ? "日本株" : "その他";
+  const map: Record<string, string> = {
+    "Technology": "テクノロジー",
+    "Energy": "エネルギー",
+    "Consumer Cyclical": "一般消費財",
+    "Consumer Defensive": "生活必需品",
+    "Healthcare": "ヘルスケア",
+    "Financial Services": "金融",
+    "Industrials": "資本財",
+    "Basic Materials": "素材",
+    "Real Estate": "不動産",
+    "Utilities": "公共事業",
+    "Communication Services": "通信",
+  };
+  return map[sector] ?? sector;
+}
+
+/** Yahoo Finance v7 APIでセクター情報を一括取得 */
+async function fetchYahooSectors(symbols: string[]): Promise<Map<string, { sector?: string; quoteType?: string }>> {
+  const result = new Map<string, { sector?: string; quoteType?: string }>();
+  if (symbols.length === 0) return result;
+  try {
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.join(",")}`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        Accept: "application/json",
+      },
+      next: { revalidate: 0 },
+    });
+    if (!res.ok) return result;
+    const json = (await res.json()) as YahooV7Response;
+    for (const q of json.quoteResponse?.result ?? []) {
+      result.set(q.symbol, { sector: q.sector, quoteType: q.quoteType });
+    }
+  } catch { /* フォールバック: セクターなしのまま */ }
+  return result;
+}
+
 /** ティッカーをYahoo Financeシンボルに変換 */
 function toYahooSymbol(ticker: string): string {
   // 日本株（4桁数字）
@@ -147,6 +199,10 @@ export async function fetchMarketData(
   const oil = getIdx("oil")?.price ?? 0;
   const oil_chg = getIdx("oil")?.change_pct ?? 0;
 
+  // --- セクター情報を並行取得 ---
+  const portfolioYahooSymbols = portfolio.map((p) => toYahooSymbol(p.ticker));
+  const sectorMap = await fetchYahooSectors(portfolioYahooSymbols);
+
   // --- ポートフォリオ評価計算 ---
   const evaluated: PortfolioEval[] = portfolio.map((item, i) => {
     const quote = portfolioResults[i];
@@ -165,6 +221,10 @@ export async function fetchMarketData(
     const gain_jpy = current_value_jpy - cost_jpy;
     const gain_pct = cost_jpy > 0 ? (gain_jpy / cost_jpy) * 100 : 0;
 
+    const yahooSym = portfolioYahooSymbols[i];
+    const sectorInfo = sectorMap.get(yahooSym);
+    const sector = normalizeSector(sectorInfo?.sector, sectorInfo?.quoteType, is_jpy);
+
     return {
       ...item,
       current_price,
@@ -175,6 +235,7 @@ export async function fetchMarketData(
       gain_pct,
       weight: 0, // 後で計算
       is_jpy,
+      sector,
     };
   });
 
