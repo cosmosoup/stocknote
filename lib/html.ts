@@ -358,7 +358,8 @@ export function buildHtml(
     <div class="hero-grid">
       <div class="hero-item">
         <div class="hero-label">評価額</div>
-        <div class="hero-value" style="color:#f8fafc">${escHtml(fmt(market.total_jpy, 0))}万円</div>
+        <div class="hero-value" style="color:#f8fafc">${escHtml(fmt(market.total_jpy + (market.cash_jpy ?? 0) / 10000, 0))}万円</div>
+        ${(market.cash_jpy ?? 0) > 0 ? `<div class="hero-sub" style="color:#64748b">うち株式 ${escHtml(fmt(market.total_jpy, 0))}万円</div>` : ""}
       </div>
       <div class="hero-item">
         <div class="hero-label">本日損益</div>
@@ -415,7 +416,7 @@ export function buildHtml(
 
   <!-- AI分析レポート -->
   <div class="section">
-    <div class="section-title">AI Analysis — claude-opus-4-6</div>
+    <div class="section-title">AI Analysis — claude-sonnet-4-6</div>
     <div class="report">${reportHtml}</div>
   </div>
 
