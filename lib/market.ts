@@ -18,6 +18,8 @@ interface YahooV7Quote {
   symbol: string;
   quoteType?: string;
   sector?: string;
+  shortName?: string;
+  longName?: string;
 }
 interface YahooV7Response {
   quoteResponse?: { result?: YahooV7Quote[] };
@@ -92,9 +94,25 @@ async function fetchFearGreed(): Promise<number> {
   }
 }
 
+/** ETFをファンド名から分類 */
+function classifyEtf(shortName?: string, longName?: string): string {
+  const name = (shortName ?? longName ?? "").toLowerCase();
+  if (/bond|fixed.income|treasury|aggregate|duration|credit|income/.test(name)) return "債券ETF";
+  if (/emerging|developing/.test(name)) return "新興国ETF";
+  if (/total world|all.world|acwi|global/.test(name)) return "全世界ETF";
+  if (/developed.market|eafe|international|europe|pacific|asia/.test(name)) return "先進国ETF";
+  return "米国ETF"; // S&P500・NASDAQ・米国株ETFなどデフォルト
+}
+
 /** セクター名を日本語に正規化 */
-function normalizeSector(sector?: string, quoteType?: string, isJpy = false): string {
-  if (quoteType === "ETF" || quoteType === "MUTUALFUND") return "ETF・ファンド";
+function normalizeSector(
+  sector?: string,
+  quoteType?: string,
+  isJpy = false,
+  shortName?: string,
+  longName?: string
+): string {
+  if (quoteType === "ETF" || quoteType === "MUTUALFUND") return classifyEtf(shortName, longName);
   if (!sector) return isJpy ? "日本株" : "その他";
   const map: Record<string, string> = {
     "Technology": "テクノロジー",
@@ -113,8 +131,8 @@ function normalizeSector(sector?: string, quoteType?: string, isJpy = false): st
 }
 
 /** Yahoo Finance v7 APIでセクター情報を一括取得 */
-async function fetchYahooSectors(symbols: string[]): Promise<Map<string, { sector?: string; quoteType?: string }>> {
-  const result = new Map<string, { sector?: string; quoteType?: string }>();
+async function fetchYahooSectors(symbols: string[]): Promise<Map<string, { sector?: string; quoteType?: string; shortName?: string; longName?: string }>> {
+  const result = new Map<string, { sector?: string; quoteType?: string; shortName?: string; longName?: string }>();
   if (symbols.length === 0) return result;
   try {
     const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.join(",")}`;
@@ -128,7 +146,7 @@ async function fetchYahooSectors(symbols: string[]): Promise<Map<string, { secto
     if (!res.ok) return result;
     const json = (await res.json()) as YahooV7Response;
     for (const q of json.quoteResponse?.result ?? []) {
-      result.set(q.symbol, { sector: q.sector, quoteType: q.quoteType });
+      result.set(q.symbol, { sector: q.sector, quoteType: q.quoteType, shortName: q.shortName, longName: q.longName });
     }
   } catch { /* フォールバック: セクターなしのまま */ }
   return result;
@@ -223,7 +241,7 @@ export async function fetchMarketData(
 
     const yahooSym = portfolioYahooSymbols[i];
     const sectorInfo = sectorMap.get(yahooSym);
-    const sector = normalizeSector(sectorInfo?.sector, sectorInfo?.quoteType, is_jpy);
+    const sector = normalizeSector(sectorInfo?.sector, sectorInfo?.quoteType, is_jpy, sectorInfo?.shortName, sectorInfo?.longName);
 
     return {
       ...item,
