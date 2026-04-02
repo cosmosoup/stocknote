@@ -142,6 +142,10 @@ function normalizeSector(
   shortName?: string,
   longName?: string
 ): string {
+  // 静的テーブルを最優先（API失敗時も確実に動く）
+  const upper = ticker.toUpperCase().replace(".T", "");
+  if (ETF_SECTOR_MAP[upper]) return ETF_SECTOR_MAP[upper];
+  // quoteType が返ってきた場合は shortName でさらに分類
   if (quoteType === "ETF" || quoteType === "MUTUALFUND") return classifyEtf(ticker, shortName, longName);
   if (!sector) return isJpy ? "日本株" : "その他";
   const map: Record<string, string> = {
