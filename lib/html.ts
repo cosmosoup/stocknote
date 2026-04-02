@@ -54,10 +54,10 @@ function buildFearGreedMeter(score: number): string {
     y: +(cy - radius * Math.sin(toRad(theta))).toFixed(1),
   });
 
-  // large-arc=0, sweep=0 で上半円を通る弧（< 180°）
+  // large-arc=0, sweep=1（時計回り）で上半円を通る弧（< 180°）
   const arc = (t1: number, t2: number, color: string) => {
     const p1 = pt(t1), p2 = pt(t2);
-    return `<path d="M${p1.x} ${p1.y}A${r} ${r} 0 0 0 ${p2.x} ${p2.y}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="butt"/>`;
+    return `<path d="M${p1.x} ${p1.y}A${r} ${r} 0 0 1 ${p2.x} ${p2.y}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="butt"/>`;
   };
 
   const needleAngle = Math.min(180, Math.max(0, score * 1.8));
