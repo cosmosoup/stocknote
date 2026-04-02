@@ -94,25 +94,55 @@ async function fetchFearGreed(): Promise<number> {
   }
 }
 
-/** ETFをファンド名から分類 */
-function classifyEtf(shortName?: string, longName?: string): string {
+// よく使われるETFの静的ルックアップ（APIより優先）
+const ETF_SECTOR_MAP: Record<string, string> = {
+  // 全世界
+  VT: "全世界ETF", ACWI: "全世界ETF", VTWAX: "全世界ETF",
+  // 米国
+  VTI: "米国ETF", VOO: "米国ETF", SPY: "米国ETF", IVV: "米国ETF",
+  QQQ: "米国ETF", QQMG: "米国ETF", DIA: "米国ETF", ITOT: "米国ETF",
+  SCHB: "米国ETF", VUG: "米国ETF", VTV: "米国ETF", MGK: "米国ETF",
+  // 先進国（米国除く）
+  VEA: "先進国ETF", EFA: "先進国ETF", IEFA: "先進国ETF",
+  VEU: "先進国ETF", VXUS: "先進国ETF", SCHF: "先進国ETF",
+  // 新興国
+  VWO: "新興国ETF", EEM: "新興国ETF", IEMG: "新興国ETF",
+  SCHE: "新興国ETF", DEM: "新興国ETF",
+  // 債券
+  BND: "債券ETF", AGG: "債券ETF", TLT: "債券ETF", IEF: "債券ETF",
+  SHY: "債券ETF", LQD: "債券ETF", HYG: "債券ETF", BNDX: "債券ETF",
+  VGIT: "債券ETF", VGLT: "債券ETF",
+  // コモディティ
+  GLD: "コモディティ", IAU: "コモディティ", SLV: "コモディティ",
+  USO: "コモディティ", DJP: "コモディティ",
+};
+
+/** ETFをファンド名から分類（静的テーブルにない場合のフォールバック） */
+function classifyEtf(ticker: string, shortName?: string, longName?: string): string {
+  // 静的テーブル優先
+  const upper = ticker.toUpperCase().replace(".T", "");
+  if (ETF_SECTOR_MAP[upper]) return ETF_SECTOR_MAP[upper];
+  // shortName でキーワード分類
   const name = (shortName ?? longName ?? "").toLowerCase();
-  if (/bond|fixed.income|treasury|aggregate|duration|credit|income/.test(name)) return "債券ETF";
+  if (!name) return "米国ETF";
+  if (/bond|fixed.income|treasury|aggregate|duration|credit/.test(name)) return "債券ETF";
   if (/emerging|developing/.test(name)) return "新興国ETF";
   if (/total world|all.world|acwi|global/.test(name)) return "全世界ETF";
   if (/developed.market|eafe|international|europe|pacific|asia/.test(name)) return "先進国ETF";
-  return "米国ETF"; // S&P500・NASDAQ・米国株ETFなどデフォルト
+  if (/commodity|gold|silver|oil|energy/.test(name)) return "コモディティ";
+  return "米国ETF";
 }
 
 /** セクター名を日本語に正規化 */
 function normalizeSector(
+  ticker: string,
   sector?: string,
   quoteType?: string,
   isJpy = false,
   shortName?: string,
   longName?: string
 ): string {
-  if (quoteType === "ETF" || quoteType === "MUTUALFUND") return classifyEtf(shortName, longName);
+  if (quoteType === "ETF" || quoteType === "MUTUALFUND") return classifyEtf(ticker, shortName, longName);
   if (!sector) return isJpy ? "日本株" : "その他";
   const map: Record<string, string> = {
     "Technology": "テクノロジー",
@@ -246,7 +276,7 @@ export async function fetchMarketData(
 
     const yahooSym = portfolioYahooSymbols[i];
     const sectorInfo = sectorMap.get(yahooSym);
-    const sector = normalizeSector(sectorInfo?.sector, sectorInfo?.quoteType, is_jpy, sectorInfo?.shortName, sectorInfo?.longName);
+    const sector = normalizeSector(item.ticker, sectorInfo?.sector, sectorInfo?.quoteType, is_jpy, sectorInfo?.shortName, sectorInfo?.longName);
 
     return {
       ...item,
