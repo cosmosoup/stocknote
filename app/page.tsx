@@ -108,6 +108,10 @@ export default function HomePage() {
               <span className="sm:hidden">一覧</span>
               <span className="hidden sm:inline">レポート一覧</span>
             </a>
+            <a href="/assets" className="text-slate-500 hover:text-slate-900 text-xs sm:text-sm transition-colors">
+              <span className="sm:hidden">資産</span>
+              <span className="hidden sm:inline">総資産</span>
+            </a>
             <a href="/portfolio" className="text-slate-500 hover:text-slate-900 text-xs sm:text-sm transition-colors">
               <span className="sm:hidden">銘柄</span>
               <span className="hidden sm:inline">銘柄管理</span>

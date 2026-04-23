@@ -19,11 +19,21 @@ export default function PortfolioPage() {
   const [cashSaving, setCashSaving] = useState(false);
   const [cashSaved, setCashSaved] = useState(false);
 
+  // その他資産
+  const [trustJpy, setTrustJpy] = useState<number>(0);
+  const [btcAmount, setBtcAmount] = useState<number>(0);
+  const [freeCashJpy, setFreeCashJpy] = useState<number>(0);
+  const [otherSaving, setOtherSaving] = useState(false);
+  const [otherSaved, setOtherSaved] = useState(false);
+
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json())
-      .then((d: { macro_strategy?: string; cash_jpy?: number }) => {
+      .then((d: { macro_strategy?: string; cash_jpy?: number; trust_jpy?: number; btc_amount?: number; free_cash_jpy?: number }) => {
         setMacroStrategy(d.macro_strategy ?? "");
         setCashJpy(d.cash_jpy ?? 0);
+        setTrustJpy(d.trust_jpy ?? 0);
+        setBtcAmount(d.btc_amount ?? 0);
+        setFreeCashJpy(d.free_cash_jpy ?? 0);
       })
       .catch(() => {});
   }, []);
@@ -54,6 +64,20 @@ export default function PortfolioPage() {
       setCashSaved(true);
       setTimeout(() => setCashSaved(false), 2000);
     } finally { setCashSaving(false); }
+  };
+
+  const handleOtherSave = async () => {
+    setOtherSaving(true);
+    setOtherSaved(false);
+    try {
+      await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trust_jpy: trustJpy, btc_amount: btcAmount, free_cash_jpy: freeCashJpy }),
+      });
+      setOtherSaved(true);
+      setTimeout(() => setOtherSaved(false), 2000);
+    } finally { setOtherSaving(false); }
   };
 
   const [items, setItems] = useState<PortfolioItem[]>([]);
@@ -190,6 +214,77 @@ export default function PortfolioPage() {
                 ({(cashJpy / 10000).toFixed(1)}万円)
               </span>
             )}
+          </div>
+        </div>
+
+        {/* その他資産 */}
+        <div className="bg-white rounded-xl p-5 border border-[#b2e0e0] shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-[#008b8b] font-semibold text-sm uppercase tracking-wider">
+                🏦 その他資産
+              </h2>
+              <p className="text-slate-400 text-xs mt-1">
+                投資信託・BTC・フリーキャッシュ。次回レポート生成時に総資産として記録されます。
+              </p>
+            </div>
+            <button
+              onClick={() => void handleOtherSave()}
+              disabled={otherSaving}
+              className="px-4 py-1.5 bg-[#008b8b] hover:bg-[#006d6d] disabled:bg-slate-200 text-white text-sm rounded-lg font-medium transition-colors whitespace-nowrap"
+            >
+              {otherSaving ? "保存中…" : otherSaved ? "✓ 保存済" : "保存"}
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="text-slate-400 text-xs block mb-1">投資信託 評価額（円）</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={trustJpy}
+                  onChange={(e) => setTrustJpy(Math.max(0, parseInt(e.target.value) || 0))}
+                  step="10000"
+                  min="0"
+                  placeholder="0"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b] font-mono"
+                />
+                <span className="text-slate-400 text-xs whitespace-nowrap">円</span>
+              </div>
+              {trustJpy > 0 && <p className="text-slate-400 text-xs mt-1">{(trustJpy / 10000).toFixed(1)}万円</p>}
+            </div>
+            <div>
+              <label className="text-slate-400 text-xs block mb-1">ビットコイン 保有量（BTC）</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={btcAmount}
+                  onChange={(e) => setBtcAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                  step="0.0001"
+                  min="0"
+                  placeholder="0"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b] font-mono"
+                />
+                <span className="text-slate-400 text-xs whitespace-nowrap">BTC</span>
+              </div>
+              <p className="text-slate-400 text-xs mt-1">価格は自動取得（CoinGecko）</p>
+            </div>
+            <div>
+              <label className="text-slate-400 text-xs block mb-1">フリーキャッシュ（円）</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={freeCashJpy}
+                  onChange={(e) => setFreeCashJpy(Math.max(0, parseInt(e.target.value) || 0))}
+                  step="10000"
+                  min="0"
+                  placeholder="0"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b] font-mono"
+                />
+                <span className="text-slate-400 text-xs whitespace-nowrap">円</span>
+              </div>
+              {freeCashJpy > 0 && <p className="text-slate-400 text-xs mt-1">{(freeCashJpy / 10000).toFixed(1)}万円</p>}
+            </div>
           </div>
         </div>
 

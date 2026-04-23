@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { loadPortfolio, saveReportLog, getHistoryData, getMacroStrategy, getCashJpy } from "@/lib/supabase";
-import { fetchMarketData } from "@/lib/market";
+import { loadPortfolio, saveReportLog, getHistoryData, getMacroStrategy, getCashJpy, getOtherAssets, saveAssetSnapshot } from "@/lib/supabase";
+import { fetchMarketData, fetchBtcJpy } from "@/lib/market";
 import { fetchNews } from "@/lib/news";
 import { generateReport } from "@/lib/claude";
 import { buildCharts } from "@/lib/charts";
@@ -24,12 +24,13 @@ export async function POST() {
       );
     }
 
-    // 2. 並行データ取得（市場データ・ニュース・履歴・マクロ戦略・キャッシュ）
-    const [cashJpy, news, history, macroStrategy] = await Promise.all([
+    // 2. 並行データ取得（市場データ・ニュース・履歴・マクロ戦略・キャッシュ・その他資産）
+    const [cashJpy, news, history, macroStrategy, otherAssets] = await Promise.all([
       getCashJpy(),
       fetchNews(),
       getHistoryData(30),
       getMacroStrategy(),
+      getOtherAssets(),
     ]);
     const market = await fetchMarketData(portfolio, cashJpy);
 
@@ -44,6 +45,21 @@ export async function POST() {
     const fullHtml = buildHtml(market, reportHtml, charts);
 
     // 6. Supabaseに保存
+    // 総資産スナップショット（失敗しても処理は続行）
+    try {
+      const btcPrice = await fetchBtcJpy();
+      const btcJpy = Math.round(otherAssets.btc_amount * btcPrice);
+      await saveAssetSnapshot({
+        stocks_jpy: Math.round(market.total_jpy * 10000),
+        trust_jpy: otherAssets.trust_jpy,
+        btc_jpy: btcJpy,
+        cash_jpy: cashJpy,
+        free_cash_jpy: otherAssets.free_cash_jpy,
+      });
+    } catch (snapshotErr) {
+      console.error("Asset snapshot save failed:", snapshotErr);
+    }
+
     await saveReportLog({
       daily_pct: market.daily_pct,
       total_pct: market.total_pct,

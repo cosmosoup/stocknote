@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { PortfolioItem, ReportLog, HistoryPoint } from "@/types";
+import type { PortfolioItem, ReportLog, HistoryPoint, OtherAssets, AssetSnapshot } from "@/types";
 
 // ビルド時に初期化されないようlazyパターンで実装
 let _client: SupabaseClient | null = null;
@@ -130,6 +130,72 @@ export async function saveCashJpy(value: number): Promise<void> {
     .from("settings")
     .upsert([{ key: "cash_jpy", value: String(Math.max(0, value)) }], { onConflict: "key" });
   if (error) throw new Error(`Supabase cash_jpy error: ${error.message}`);
+}
+
+/** その他資産（投資信託・BTC保有量・フリーキャッシュ）を取得 */
+export async function getOtherAssets(): Promise<OtherAssets> {
+  const db = getSupabase();
+  const { data } = await db
+    .from("settings")
+    .select("key, value")
+    .in("key", ["trust_jpy", "btc_amount", "free_cash_jpy"]);
+  const map = Object.fromEntries(
+    ((data ?? []) as { key: string; value: string }[]).map((r) => [r.key, r.value])
+  );
+  return {
+    trust_jpy: parseInt(map.trust_jpy ?? "0", 10) || 0,
+    btc_amount: parseFloat(map.btc_amount ?? "0") || 0,
+    free_cash_jpy: parseInt(map.free_cash_jpy ?? "0", 10) || 0,
+  };
+}
+
+/** その他資産を保存 */
+export async function saveOtherAssets(assets: Partial<OtherAssets>): Promise<void> {
+  const db = getSupabase();
+  const rows = (Object.entries(assets) as [string, number][]).map(([key, value]) => ({
+    key,
+    value: String(value),
+  }));
+  if (rows.length === 0) return;
+  const { error } = await db.from("settings").upsert(rows, { onConflict: "key" });
+  if (error) throw new Error(`Supabase other_assets error: ${error.message}`);
+}
+
+/** 総資産スナップショットを保存（同日JST内はupsert） */
+export async function saveAssetSnapshot(params: {
+  stocks_jpy: number;
+  trust_jpy: number;
+  btc_jpy: number;
+  cash_jpy: number;
+  free_cash_jpy: number;
+}): Promise<void> {
+  const db = getSupabase();
+  const jstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const snapshotDate = jstNow.toISOString().slice(0, 10);
+  const total_jpy =
+    params.stocks_jpy + params.trust_jpy + params.btc_jpy +
+    params.cash_jpy + params.free_cash_jpy;
+  const { error } = await db
+    .from("asset_snapshot")
+    .upsert(
+      [{ ...params, total_jpy, snapshot_date: snapshotDate, created_at: new Date().toISOString() }],
+      { onConflict: "snapshot_date" }
+    );
+  if (error) throw new Error(`Supabase asset_snapshot error: ${error.message}`);
+}
+
+/** 総資産履歴を取得 */
+export async function getAssetHistory(limit = 90): Promise<AssetSnapshot[]> {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("asset_snapshot")
+    .select("snapshot_date, stocks_jpy, trust_jpy, btc_jpy, cash_jpy, free_cash_jpy, total_jpy")
+    .order("snapshot_date", { ascending: false })
+    .limit(limit);
+  if (error) return [];
+  return ([...(data as (AssetSnapshot & { snapshot_date: string })[])])
+    .reverse()
+    .map((r) => ({ ...r, date: r.snapshot_date }));
 }
 
 /** マクロ投資戦略を保存（upsert） */

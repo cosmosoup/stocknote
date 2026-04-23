@@ -84,3 +84,21 @@ export interface HistoryPoint {
   daily_pct: number;    // 日次損益%
   sp500_chg: number;    // S&P500日次%（market_dataから取得）
 }
+
+// その他資産設定（手動入力）
+export interface OtherAssets {
+  trust_jpy: number;     // 投資信託評価額（円）
+  btc_amount: number;    // BTC保有量
+  free_cash_jpy: number; // フリーキャッシュ（円）
+}
+
+// 総資産スナップショット（日次記録）
+export interface AssetSnapshot {
+  date: string;
+  stocks_jpy: number;    // 株式評価額（円）
+  trust_jpy: number;     // 投資信託（円）
+  btc_jpy: number;       // BTC評価額（円）
+  cash_jpy: number;      // ポートフォリオキャッシュ（円）
+  free_cash_jpy: number; // フリーキャッシュ（円）
+  total_jpy: number;     // 合計（円）
+}

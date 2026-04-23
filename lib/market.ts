@@ -186,6 +186,24 @@ async function fetchYahooSectors(symbols: string[]): Promise<Map<string, { secto
   return result;
 }
 
+/** BTC/JPY を CoinGecko APIで取得（フォールバックはYahoo Finance） */
+export async function fetchBtcJpy(): Promise<number> {
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=jpy",
+      { next: { revalidate: 0 } }
+    );
+    if (res.ok) {
+      const json = (await res.json()) as { bitcoin?: { jpy?: number } };
+      const price = json.bitcoin?.jpy;
+      if (price && price > 0) return price;
+    }
+  } catch { /* fallthrough */ }
+  // フォールバック: Yahoo Finance (BTC-JPY)
+  const q = await fetchYahooQuote("BTC-JPY");
+  return q?.price ?? 0;
+}
+
 /** ティッカーをYahoo Financeシンボルに変換 */
 function toYahooSymbol(ticker: string): string {
   // 日本株（4桁数字）
