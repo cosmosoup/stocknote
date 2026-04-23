@@ -63,6 +63,12 @@ export interface Charts {
   bar: string;      // 銘柄別損益横棒
   compare: string;  // ポートフォリオ vs S&P500 + ドローダウン
   sector: string;   // セクター別配分
+  compareStats?: {
+    portPct: number;   // 期間中のポートフォリオ累積リターン%
+    sp500Pct: number;  // 期間中のS&P500累積リターン%
+    startDate: string; // 比較開始日
+    days: number;      // 日数
+  };
 }
 
 // 過去ログ（Report_Log相当）

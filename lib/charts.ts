@@ -119,37 +119,32 @@ function buildBar(portfolio: PortfolioEval[]): string {
 }
 
 /** ポートフォリオ vs S&P500 累積リターン + ドローダウン
- *  - ポートフォリオ: total_pct（取得コストベース含損益%）を初日基準で相対化
- *  - S&P500: sp500_chg を初日から複利チェーン（初日 ≈ 0%）
- *  → 両線とも「ログ開始日からどれだけ動いたか」で揃えることで正当な比較を実現
+ *  - ポートフォリオ: daily_pct（日次%）を複利チェーン → 市場価値ベースの正しいTWR
+ *  - S&P500: sp500_chg を複利チェーン → 同じ方式で対等な比較
+ *  両線とも「ログ開始日=0%」スタートで、同じ分母方式（現在価値ベース）を使う
  */
-function buildCompare(history: HistoryPoint[]): string {
-  if (history.length === 0) return "";
+function buildCompare(history: HistoryPoint[]): { url: string; portPct: number; sp500Pct: number } {
+  if (history.length === 0) return { url: "", portPct: 0, sp500Pct: 0 };
 
-  // 初日の total_pct を基準（0%スタート）に揃える
-  const basePct = history[0].total_pct;
+  let portMul = 1;
   let sp500Mul = 1;
-  let peakPort = 0;
+  let peakPort = 1;
   const portData: number[] = [];
   const sp500Data: number[] = [];
   const drawdownData: number[] = [];
   const labels: string[] = [];
 
   for (const h of history) {
-    // ポートフォリオ: 取得コストベースの含損益を初日差分で相対化
-    const portVal = parseFloat((h.total_pct - basePct).toFixed(2));
-
-    // S&P500: 日次リターンを複利チェーン（初日の変動も含む）
+    // ポートフォリオ: daily_pct（当日の価格変動ベース日次リターン）を複利チェーン
+    portMul *= 1 + (h.daily_pct ?? 0) / 100;
+    // S&P500: 日次リターンを複利チェーン（同じ方式）
     sp500Mul *= 1 + (h.sp500_chg ?? 0) / 100;
-    const sp500Val = parseFloat(((sp500Mul - 1) * 100).toFixed(2));
+    // ドローダウン: ポートフォリオのピークからの下落幅
+    if (portMul > peakPort) peakPort = portMul;
 
-    // ドローダウン: ポートフォリオラインのピークからの乖離
-    if (portVal > peakPort) peakPort = portVal;
-    const drawdown = parseFloat((portVal - peakPort).toFixed(2));
-
-    portData.push(portVal);
-    sp500Data.push(sp500Val);
-    drawdownData.push(drawdown);
+    portData.push(parseFloat(((portMul - 1) * 100).toFixed(2)));
+    sp500Data.push(parseFloat(((sp500Mul - 1) * 100).toFixed(2)));
+    drawdownData.push(parseFloat(((portMul / peakPort - 1) * 100).toFixed(2)));
     labels.push(h.date.slice(5).replace("-", "/"));
   }
 
@@ -159,7 +154,7 @@ function buildCompare(history: HistoryPoint[]): string {
       labels,
       datasets: [
         {
-          label: "ポートフォリオ（含損益%・初日比）",
+          label: "ポートフォリオ",
           data: portData,
           borderColor: "#008b8b",
           backgroundColor: "rgba(0,139,139,0.06)",
@@ -170,7 +165,7 @@ function buildCompare(history: HistoryPoint[]): string {
           yAxisID: "y",
         },
         {
-          label: "S&P 500（同期間累積）",
+          label: "S&P 500",
           data: sp500Data,
           borderColor: "#94a3b8",
           backgroundColor: "transparent",
@@ -214,7 +209,11 @@ function buildCompare(history: HistoryPoint[]): string {
     },
   };
 
-  return toUrl(config, 900, 280);
+  return {
+    url: toUrl(config, 900, 280),
+    portPct: portData[portData.length - 1] ?? 0,
+    sp500Pct: sp500Data[sp500Data.length - 1] ?? 0,
+  };
 }
 
 /** セクター別配分 横棒グラフ */
@@ -262,10 +261,17 @@ export function buildCharts(
   history: HistoryPoint[],
   market?: Pick<MarketData, "cash_jpy" | "total_jpy">
 ): Charts {
+  const compareResult = history.length >= 2 ? buildCompare(history) : null;
   return {
     alloc: buildAllocationBar(portfolio, market?.cash_jpy ?? 0, market?.total_jpy ?? 0),
     bar: buildBar(portfolio),
-    compare: history.length >= 2 ? buildCompare(history) : "",
+    compare: compareResult?.url ?? "",
     sector: buildSectorBar(portfolio, market?.cash_jpy ?? 0, market?.total_jpy ?? 0),
+    compareStats: compareResult && history.length >= 2 ? {
+      portPct: compareResult.portPct,
+      sp500Pct: compareResult.sp500Pct,
+      startDate: history[0].date,
+      days: history.length,
+    } : undefined,
   };
 }
