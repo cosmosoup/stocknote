@@ -226,26 +226,39 @@ export default function HomePage() {
       {/* レポート表示 */}
       {reportHtml && !loading && (
         <div className="w-full page-enter">
-          {/* 評価額サマリーバー（カウントアップ演出）*/}
+          {/* ② 黒カード with count-up（assetsページと統一） */}
           {summary && (
             <div className="max-w-5xl mx-auto px-4 pt-4 pb-2">
-              <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-5 py-3 flex items-center flex-wrap gap-x-8 gap-y-2">
-                <div>
-                  <div className="text-slate-400 text-xs mb-0.5">株式評価額</div>
-                  <div className="num font-bold text-slate-900 text-lg">
-                    {totalWan.toLocaleString()}<span className="text-sm font-normal text-slate-500 ml-1">万円</span>
+              <div style={{
+                background: "linear-gradient(135deg, #0f172a 0%, #1a2744 50%, #1e293b 100%)",
+                borderRadius: 10,
+                padding: "18px 24px",
+                boxShadow: "0 8px 32px rgba(15,23,42,0.18)",
+              }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 0 }}>
+                  <div style={{ paddingRight: 20 }}>
+                    <div className="sn-label" style={{ color: "#94a3b8", marginBottom: 5 }}>株式評価額</div>
+                    <div className="num" style={{ color: "#f8fafc", fontSize: "1.7rem", fontWeight: 700, lineHeight: 1 }}>
+                      {totalWan.toLocaleString()}<span style={{ fontSize: "0.85rem", color: "#94a3b8", marginLeft: 4 }}>万円</span>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <div className="text-slate-400 text-xs mb-0.5">本日比</div>
-                  <div className={`num font-bold text-lg ${summary.daily_pct >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                    {summary.daily_pct >= 0 ? "+" : ""}{summary.daily_pct.toFixed(2)}%
+                  <div style={{ borderLeft: "1px solid #334155", paddingLeft: 20, paddingRight: 20 }}>
+                    <div className="sn-label" style={{ color: "#94a3b8", marginBottom: 5 }}>本日比</div>
+                    <div className="num font-bold" style={{ fontSize: "1.3rem", color: summary.daily_pct >= 0 ? "#34d399" : "#f87171" }}>
+                      {summary.daily_pct >= 0 ? "+" : ""}{summary.daily_pct.toFixed(2)}%
+                    </div>
                   </div>
-                </div>
-                <div className="ml-auto text-right">
-                  <div className="text-slate-400 text-xs">最終生成</div>
-                  <div className="text-slate-500 text-xs mt-0.5">
-                    {new Date(summary.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}
+                  <div style={{ borderLeft: "1px solid #334155", paddingLeft: 20, paddingRight: 20 }}>
+                    <div className="sn-label" style={{ color: "#94a3b8", marginBottom: 5 }}>通算損益</div>
+                    <div className="num font-bold" style={{ fontSize: "1.3rem", color: summary.total_pct >= 0 ? "#34d399" : "#f87171" }}>
+                      {summary.total_pct >= 0 ? "+" : ""}{summary.total_pct.toFixed(2)}%
+                    </div>
+                  </div>
+                  <div style={{ borderLeft: "1px solid #334155", paddingLeft: 20 }}>
+                    <div className="sn-label" style={{ color: "#94a3b8", marginBottom: 5 }}>最終生成</div>
+                    <div style={{ color: "#64748b", fontSize: "0.8rem", lineHeight: 1.4 }}>
+                      {new Date(summary.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    </div>
                   </div>
                 </div>
               </div>

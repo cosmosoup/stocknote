@@ -30,14 +30,14 @@ function buildAllocationBar(portfolio: PortfolioEval[], cashJpy = 0, totalJpyWan
     const grandTotalJpy = totalJpyWan * 10000 + cashJpy;
     const cashWeight = parseFloat(((cashJpy / grandTotalJpy) * 100).toFixed(1));
     if (cashWeight > 0.1) {
-      labels.push("キャッシュ");
+      labels.push("現金");
       data.push(cashWeight);
     }
   }
 
   // キャッシュは薄いグレーで表示
   const bgColors = labels.map((l, i) =>
-    l === "キャッシュ" ? "#cbd5e1" : COLORS[i % COLORS.length]
+    l === "現金" ? "#cbd5e1" : COLORS[i % COLORS.length]
   );
 
   const config = {
@@ -72,7 +72,7 @@ function buildAllocationBar(portfolio: PortfolioEval[], cashJpy = 0, totalJpyWan
     },
   };
 
-  const height = Math.max(220, labels.length * 34 + 50);
+  const height = Math.max(180, labels.length * 28 + 40);
   return toUrl(config, 700, height);
 }
 
@@ -114,7 +114,7 @@ function buildBar(portfolio: PortfolioEval[]): string {
     },
   };
 
-  const height = Math.max(220, labels.length * 34 + 50);
+  const height = Math.max(180, labels.length * 28 + 40);
   return toUrl(config, 700, height);
 }
 
@@ -234,14 +234,14 @@ function buildSectorBar(portfolio: PortfolioEval[], cashJpy = 0, totalJpyWan = 0
     sectorTotals.set(s, (sectorTotals.get(s) ?? 0) + val);
   }
   if (cashJpy > 0) {
-    sectorTotals.set("キャッシュ", (sectorTotals.get("キャッシュ") ?? 0) + cashJpy);
+    sectorTotals.set("現金", (sectorTotals.get("現金") ?? 0) + cashJpy);
   }
 
   const entries = [...sectorTotals.entries()].sort(([, a], [, b]) => b - a);
   const labels = entries.map(([l]) => l);
   const data = entries.map(([, v]) => parseFloat(((v / grandTotalJpy) * 100).toFixed(1)));
   const bgColors = labels.map((l, i) =>
-    l === "キャッシュ" ? "#cbd5e1" : COLORS[i % COLORS.length]
+    l === "現金" ? "#cbd5e1" : COLORS[i % COLORS.length]
   );
 
   const config = {

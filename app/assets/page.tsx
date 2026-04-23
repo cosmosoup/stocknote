@@ -5,19 +5,42 @@ import type { AssetSnapshot } from "@/types";
 
 const QUICKCHART = "https://quickchart.io/chart";
 
+// ⑤ 用語変更: キャッシュ→現金、フリーキャッシュ→投資待機資金
 const BREAKDOWN = [
-  { key: "stocks_jpy",    label: "株式",             color: "#008b8b" },
-  { key: "trust_jpy",     label: "投資信託",         color: "#3b82f6" },
-  { key: "btc_jpy",       label: "BTC",              color: "#f59e0b" },
-  { key: "cash_jpy",      label: "キャッシュ",       color: "#10b981" },
-  { key: "free_cash_jpy", label: "フリーキャッシュ", color: "#94a3b8" },
+  { key: "stocks_jpy",    label: "株式",           color: "#008b8b" },
+  { key: "trust_jpy",     label: "投資信託",       color: "#3b82f6" },
+  { key: "btc_jpy",       label: "BTC",            color: "#f59e0b" },
+  { key: "cash_jpy",      label: "現金",           color: "#10b981" },
+  { key: "free_cash_jpy", label: "投資待機資金",   color: "#94a3b8" },
 ] as const;
+
+type Period = "1m" | "3m" | "6m" | "1y" | "ytd" | "all";
+const PERIODS: { key: Period; label: string }[] = [
+  { key: "1m",  label: "1ヶ月" },
+  { key: "3m",  label: "3ヶ月" },
+  { key: "6m",  label: "6ヶ月" },
+  { key: "1y",  label: "1年" },
+  { key: "ytd", label: "今年" },
+  { key: "all", label: "全期間" },
+];
 
 function toWan(yen: number, d = 0) { return (yen / 10000).toFixed(d); }
 
-/* ── カウントアップ基本フック ──
-   cubic ease-out で 0 → target へ変化。
-   メインコンポーネント・サブコンポーネント両方から呼ぶ。 */
+function filterByPeriod(history: AssetSnapshot[], period: Period): AssetSnapshot[] {
+  if (period === "all") return history;
+  const now = new Date();
+  let from: Date;
+  if (period === "ytd") {
+    from = new Date(now.getFullYear(), 0, 1);
+  } else {
+    const days = { "1m": 30, "3m": 90, "6m": 180, "1y": 365 }[period as "1m" | "3m" | "6m" | "1y"];
+    from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  }
+  const fromStr = from.toISOString().slice(0, 10);
+  return history.filter(h => h.date >= fromStr);
+}
+
+/* ── カウントアップ基本フック ── */
 function useCountUpRaw(target: number, duration = 800) {
   const [val, setVal] = useState(0);
   const rafRef = useRef<number | null>(null);
@@ -35,14 +58,13 @@ function useCountUpRaw(target: number, duration = 800) {
   return val;
 }
 
-/* ② ヒーロー内訳グリッドの各数値用コンポーネント
-   hook をループで呼べないため、個別コンポーネントとして実装 */
+/* ② 内訳グリッドの個別数値用（hook はループで呼べないため個別コンポーネントに） */
 function WanCount({ jpy, d = 1 }: { jpy: number; d?: number }) {
   const val = useCountUpRaw(jpy);
   return <>{(val / 10000).toFixed(d)}</>;
 }
 
-/* ④ 資産配分（ドーナツ）── 右列 40% に収まるサイズ・凡例は下 */
+/* ① 資産配分ドーナツ ── datalabelsを無効化して視認性向上、凡例は下 */
 function buildDonutUrl(snap: AssetSnapshot): string {
   const entries = BREAKDOWN
     .map(b => ({ label: b.label, value: +(snap[b.key as keyof AssetSnapshot] as number), color: b.color }))
@@ -64,9 +86,10 @@ function buildDonutUrl(snap: AssetSnapshot): string {
     options: {
       cutout: "58%",
       plugins: {
+        datalabels: { display: false },
         legend: {
           position: "bottom",
-          labels: { color: "#334155", font: { size: 12 }, padding: 10, boxWidth: 11, boxHeight: 11 },
+          labels: { color: "#0f172a", font: { size: 12 }, padding: 10, boxWidth: 11, boxHeight: 11 },
         },
       },
     },
@@ -74,41 +97,41 @@ function buildDonutUrl(snap: AssetSnapshot): string {
   return `${QUICKCHART}?c=${encodeURIComponent(JSON.stringify(cfg))}&backgroundColor=%23ffffff&width=380&height=320&v=3`;
 }
 
-/* 総資産推移（折れ線）── 左列 60% 用 */
-function buildTrendUrl(history: AssetSnapshot[]): string {
-  if (history.length < 2) return "";
-  const labels = history.map(h => h.date.slice(5).replace("-", "/"));
-  const data   = history.map(h => +((h.total_jpy) / 10000).toFixed(1));
+/* ⑥ 積み上げ面グラフ（折れ線stacked） */
+function buildStackedUrl(filtered: AssetSnapshot[]): string {
+  if (filtered.length < 2) return "";
+  // データが多い場合はサンプリング（URL長対策）
+  let data = filtered;
+  if (data.length > 60) {
+    const step = Math.ceil(data.length / 60);
+    data = data.filter((_, i) => i === 0 || i === filtered.length - 1 || i % step === 0);
+  }
+  const labels = data.map(h => h.date.slice(5).replace("-", "/"));
+  const datasets = BREAKDOWN.map(b => ({
+    label: b.label,
+    data: data.map(h => +((+(h[b.key as keyof AssetSnapshot] as number)) / 10000).toFixed(1)),
+    backgroundColor: b.color + "cc",
+    borderColor: b.color,
+    borderWidth: 1.5,
+    fill: true,
+    tension: 0.3,
+    pointRadius: data.length > 45 ? 0 : 3,
+  }));
   const cfg = {
     type: "line",
-    data: {
-      labels,
-      datasets: [{
-        label: "総資産（万円）",
-        data,
-        borderColor: "#008b8b",
-        backgroundColor: "rgba(0,139,139,0.07)",
-        fill: true,
-        tension: 0.35,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        pointBackgroundColor: "#008b8b",
-        pointBorderColor: "#ffffff",
-        pointBorderWidth: 2,
-        borderWidth: 2.5,
-      }],
-    },
+    data: { labels, datasets },
     options: {
-      plugins: {
-        legend: { labels: { color: "#64748b", font: { size: 13 }, boxWidth: 14, padding: 14 } },
-      },
       scales: {
-        x: { ticks: { color: "#64748b", font: { size: 12 }, maxTicksLimit: 10 }, grid: { display: false } },
-        y: { ticks: { color: "#94a3b8", font: { size: 12 } }, grid: { color: "#f1f5f9" } },
+        x: { stacked: true, ticks: { color: "#64748b", font: { size: 12 }, maxTicksLimit: 10 }, grid: { display: false } },
+        y: { stacked: true, ticks: { color: "#94a3b8", font: { size: 12 } }, grid: { color: "#f1f5f9" } },
+      },
+      plugins: {
+        legend: { labels: { color: "#64748b", font: { size: 12 }, padding: 12, boxWidth: 12, boxHeight: 12 } },
+        datalabels: { display: false },
       },
     },
   };
-  return `${QUICKCHART}?c=${encodeURIComponent(JSON.stringify(cfg))}&backgroundColor=%23ffffff&width=700&height=280&v=3`;
+  return `${QUICKCHART}?c=${encodeURIComponent(JSON.stringify(cfg))}&backgroundColor=%23ffffff&width=700&height=290&v=3`;
 }
 
 /* ── メインコンポーネント ── */
@@ -116,13 +139,13 @@ export default function AssetsPage() {
   const [history, setHistory] = useState<AssetSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
   const [entered, setEntered] = useState(false);
+  const [period, setPeriod] = useState<Period>("all");  // ⑥ 期間フィルター
 
   useEffect(() => {
     fetch("/api/assets")
       .then(r => r.json())
       .then((d: { history: AssetSnapshot[]; btc_price_jpy: number }) => {
         setHistory(d.history ?? []);
-        // ⑥ btc_price_jpy は表示不要のため使用しない
       })
       .catch(() => {})
       .finally(() => {
@@ -135,22 +158,20 @@ export default function AssetsPage() {
   const prev    = history[history.length - 2];
   const diffJpy = latest && prev ? latest.total_jpy - prev.total_jpy : 0;
 
-  // ② 合計カウントアップ（万円単位）
+  // ② 合計カウントアップ
   const totalRaw = useCountUpRaw(latest ? latest.total_jpy : 0);
   const totalWan = Math.round(totalRaw / 10000);
 
   const breakdown = latest
-    ? BREAKDOWN
-        .map(b => ({ ...b, value: +(latest[b.key as keyof AssetSnapshot] as number) }))
-        .filter(e => e.value > 0)
+    ? BREAKDOWN.map(b => ({ ...b, value: +(latest[b.key as keyof AssetSnapshot] as number) })).filter(e => e.value > 0)
     : [];
 
-  const donutUrl = latest ? buildDonutUrl(latest) : "";
-  const trendUrl = history.length >= 2 ? buildTrendUrl(history) : "";
+  const filteredHistory = filterByPeriod(history, period);
+  const donutUrl  = latest ? buildDonutUrl(latest) : "";
+  const stackedUrl = buildStackedUrl(filteredHistory);
 
   return (
     <>
-      {/* ⑦ モバイルは縦積み、sm以上で3fr:2fr横並び */}
       <style>{`
         .chart-grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
         @media (min-width: 640px) { .chart-grid { grid-template-columns: 3fr 2fr; } }
@@ -164,10 +185,8 @@ export default function AssetsPage() {
             <div className="flex items-center gap-3">
               <a href="/">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/logo.png" alt="StockNote" className="h-10 w-auto"
-                  onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-                />
+                <img src="/logo.png" alt="StockNote" className="h-10 w-auto"
+                  onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
               </a>
               <span className="hidden sm:inline text-slate-300 select-none">|</span>
               <span className="hidden sm:inline text-slate-700 font-semibold text-sm">総資産</span>
@@ -182,9 +201,7 @@ export default function AssetsPage() {
 
         <div className="max-w-5xl mx-auto px-4 py-6">
 
-          {loading && (
-            <div className="text-slate-400 text-center py-24 text-sm sn-pulse">読み込み中…</div>
-          )}
+          {loading && <div className="text-slate-400 text-center py-24 text-sm sn-pulse">読み込み中…</div>}
 
           {!loading && history.length === 0 && (
             <div className="text-center py-24">
@@ -202,13 +219,13 @@ export default function AssetsPage() {
               {latest && (
                 <div style={{
                   background: "linear-gradient(135deg, #0f172a 0%, #1a2744 50%, #1e293b 100%)",
-                  borderRadius: 10,                              /* ① 14→10px */
+                  borderRadius: 10,
                   padding: "24px 28px",
                   boxShadow: "0 12px 40px rgba(15,23,42,0.2)",
                 }}>
-                  {/* 合計 */}
                   <div className="mb-5">
-                    <div className="sn-label mb-2" style={{ color: "#475569" }}>
+                    {/* ③ グレー文字を #94a3b8 に変更 */}
+                    <div className="sn-label mb-2" style={{ color: "#94a3b8" }}>
                       Total Assets — {latest.date}
                     </div>
                     <div className="num" style={{ color: "#f8fafc", fontSize: "2.6rem", fontWeight: 700, lineHeight: 1 }}>
@@ -222,23 +239,24 @@ export default function AssetsPage() {
                     )}
                   </div>
 
-                  {/* ② 内訳グリッド（各数値もカウントアップ） */}
+                  {/* ② 内訳グリッド - 各数値もカウントアップ */}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
                     {breakdown.map(({ key, label, value, color }) => (
                       <div key={key} style={{
                         background: "rgba(255,255,255,0.04)",
                         border: "1px solid rgba(255,255,255,0.07)",
-                        borderRadius: 6,                         /* ① 8→6px */
+                        borderRadius: 6,
                         padding: "10px 12px",
                       }}>
                         <div className="flex items-center gap-1.5 mb-1.5">
                           <div style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                          <span style={{ color: "#64748b", fontSize: "0.72rem" }}>{label}</span>
+                          {/* ③ ラベルも #94a3b8 */}
+                          <span style={{ color: "#94a3b8", fontSize: "0.72rem" }}>{label}</span>
                         </div>
                         <div className="num font-bold" style={{ color: "#f1f5f9", fontSize: "1.05rem" }}>
                           <WanCount jpy={value} />万
                         </div>
-                        <div className="num mt-0.5" style={{ color: "#475569", fontSize: "0.72rem" }}>
+                        <div className="num mt-0.5" style={{ color: "#64748b", fontSize: "0.72rem" }}>
                           {((value / latest.total_jpy) * 100).toFixed(1)}%
                         </div>
                       </div>
@@ -247,18 +265,38 @@ export default function AssetsPage() {
                 </div>
               )}
 
-              {/* ⑤⑦ 推移(左60%) + 資産配分(右40%) */}
-              {latest && (trendUrl || donutUrl) && (
+              {/* ⑦ 2カラム: 推移(左60%) + 資産配分(右40%) */}
+              {latest && (stackedUrl || donutUrl) && (
                 <div className="chart-grid">
-                  {/* 左: 総資産推移 */}
-                  {trendUrl && (
+                  {/* 左: ⑥ 積み上げグラフ + 期間フィルター */}
+                  {stackedUrl && (
                     <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
-                      <div className="sn-label mb-3">総資産推移</div>
+                      <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+                        <div className="sn-label">総資産推移</div>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {PERIODS.map(p => (
+                            <button
+                              key={p.key}
+                              onClick={() => setPeriod(p.key)}
+                              className="text-xs rounded font-medium transition-colors"
+                              style={{
+                                padding: "3px 9px",
+                                background: period === p.key ? "#008b8b" : "#f1f5f9",
+                                color:      period === p.key ? "#ffffff"  : "#64748b",
+                                border: "none",
+                                cursor: "pointer",
+                              }}
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={trendUrl} alt="総資産推移" className="w-full rounded block" loading="lazy" />
+                      <img src={stackedUrl} alt="総資産推移" className="w-full rounded block" loading="lazy" />
                     </div>
                   )}
-                  {/* ③④ 右: 資産配分 */}
+                  {/* 右: ① 資産配分ドーナツ */}
                   {donutUrl && (
                     <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
                       <div className="sn-label mb-3">資産配分</div>
@@ -276,13 +314,11 @@ export default function AssetsPage() {
                     <div className="sn-label">履歴</div>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full" style={{ borderCollapse: "collapse", minWidth: 560 }}>
+                    <table className="w-full" style={{ borderCollapse: "collapse", minWidth: 580 }}>
                       <thead>
                         <tr style={{ borderTop: "1px solid #f1f5f9", background: "#f8fafc" }}>
-                          {["日付", "総資産", "株式", "投資信託", "BTC", "キャッシュ", "フリーキャッシュ"].map(h => (
-                            <th key={h} className="sn-label text-left px-4 py-2.5 whitespace-nowrap">
-                              {h}
-                            </th>
+                          {["日付", "総資産", ...BREAKDOWN.map(b => b.label)].map(h => (
+                            <th key={h} className="sn-label text-left px-4 py-2.5 whitespace-nowrap">{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -291,10 +327,7 @@ export default function AssetsPage() {
                           <tr
                             key={snap.date}
                             className="transition-colors"
-                            style={{
-                              borderTop: "1px solid #f1f5f9",
-                              background: i === 0 ? "rgba(0,139,139,0.03)" : undefined,
-                            }}
+                            style={{ borderTop: "1px solid #f1f5f9", background: i === 0 ? "rgba(0,139,139,0.03)" : undefined }}
                             onMouseEnter={e => { if (i !== 0) (e.currentTarget as HTMLElement).style.background = "#f8fafc"; }}
                             onMouseLeave={e => { if (i !== 0) (e.currentTarget as HTMLElement).style.background = ""; }}
                           >

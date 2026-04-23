@@ -247,7 +247,7 @@ export function buildHtml(
     color: #ffffff;
     letter-spacing: 0.06em;
   }
-  .header-date { font-size: 0.72rem; color: #475569; }
+  .header-date { font-size: 0.72rem; color: #94a3b8; }
   .hero-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -257,7 +257,7 @@ export function buildHtml(
   .hero-item:first-child { padding-left: 0; border-left: none; }
   .hero-label {
     font-size: 0.63rem;
-    color: #64748b;
+    color: #94a3b8;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin-bottom: 5px;
@@ -468,14 +468,14 @@ export function buildHtml(
 
   <!-- マーケット指標 -->
   <div class="section">
-    <div class="section-title">Market Overview</div>
+    <div class="section-title">マーケット概況</div>
     <div class="mkt-grid">${marketHtml}</div>
     ${forexHtml}
   </div>
 
   <!-- グラフ -->
   <div class="section">
-    <div class="section-title">Charts</div>
+    <div class="section-title">グラフ</div>
     <div class="chart-block">
       <div class="chart-label">ポートフォリオ構成比</div>
       <img src="${charts.alloc}" alt="構成比" class="chart-img">
@@ -513,7 +513,7 @@ export function buildHtml(
 
   <!-- AI分析レポート -->
   <div class="section">
-    <div class="section-title">AI Analysis — claude-sonnet-4-6</div>
+    <div class="section-title">AI 分析</div>
     <div class="report">${reportHtml}</div>
   </div>
 

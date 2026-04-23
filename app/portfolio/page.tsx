@@ -184,10 +184,10 @@ export default function PortfolioPage() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h2 className="text-[#008b8b] font-semibold text-sm uppercase tracking-wider">
-                💴 キャッシュ残高
+                💴 現金残高
               </h2>
               <p className="text-slate-400 text-xs mt-1">
-                円建てキャッシュ残高。構成比チャートとAI分析に反映されます。
+                円建て現金残高。構成比チャートとAI分析に反映されます。
               </p>
             </div>
             <button
@@ -225,7 +225,7 @@ export default function PortfolioPage() {
                 🏦 その他資産
               </h2>
               <p className="text-slate-400 text-xs mt-1">
-                投資信託・BTC・フリーキャッシュ。次回レポート生成時に総資産として記録されます。
+                投資信託・BTC・投資待機資金。次回レポート生成時に総資産として記録されます。
               </p>
             </div>
             <button
@@ -270,7 +270,7 @@ export default function PortfolioPage() {
               <p className="text-slate-400 text-xs mt-1">価格は自動取得（CoinGecko）</p>
             </div>
             <div>
-              <label className="text-slate-400 text-xs block mb-1">フリーキャッシュ（円）</label>
+              <label className="text-slate-400 text-xs block mb-1">投資待機資金（円）</label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
