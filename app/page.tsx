@@ -113,8 +113,8 @@ export default function HomePage() {
               <span className="hidden sm:inline">総資産</span>
             </a>
             <a href="/portfolio" className="text-slate-500 hover:text-slate-900 text-xs sm:text-sm transition-colors">
-              <span className="sm:hidden">銘柄</span>
-              <span className="hidden sm:inline">銘柄管理</span>
+              <span className="sm:hidden">管理</span>
+              <span className="hidden sm:inline">資産管理</span>
             </a>
             <button
               onClick={() => void handleGenerate()}

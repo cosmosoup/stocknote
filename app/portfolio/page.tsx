@@ -141,7 +141,7 @@ export default function PortfolioPage() {
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <a href="/" className="text-slate-500 hover:text-slate-900 text-sm">← 最新レポート</a>
-            <span className="text-slate-900 font-semibold">📋 銘柄管理</span>
+            <span className="text-slate-900 font-semibold">📋 資産管理</span>
           </div>
           <button onClick={() => void handleLogout()} className="text-slate-400 hover:text-slate-600 text-xs transition-colors">
             ログアウト

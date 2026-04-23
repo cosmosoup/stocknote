@@ -16,36 +16,6 @@ interface MonthlyItem {
   month: string; // "2026-02"
 }
 
-function buildTrendChartUrl(history: HistoryItem[]): string {
-  const sorted = [...history].reverse().slice(-60);
-  const labels = sorted.map((h) =>
-    new Date(h.created_at).toLocaleDateString("ja-JP", {
-      month: "2-digit", day: "2-digit", timeZone: "Asia/Tokyo",
-    })
-  );
-  const values = sorted.map((h) => Math.round(h.total_jpy));
-  const config = {
-    type: "line",
-    data: {
-      labels,
-      datasets: [{
-        data: values,
-        borderColor: "#008b8b",
-        backgroundColor: "rgba(0,139,139,0.06)",
-        fill: true, tension: 0.35, pointRadius: 2,
-        pointBackgroundColor: "#008b8b", borderWidth: 2,
-      }],
-    },
-    options: {
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { color: "#e2e8f0" } },
-        y: { ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { color: "#e2e8f0" } },
-      },
-    },
-  };
-  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(config))}&w=900&h=160&bkg=%23ffffff&v=3`;
-}
 
 function pctColor(n: number) {
   if (n > 0) return "text-[#008b8b]";
@@ -103,7 +73,6 @@ export default function HistoryPage() {
     router.push("/login");
   };
 
-  const trendUrl = history.length >= 2 ? buildTrendChartUrl(history) : null;
   const groups = groupByMonth(history);
 
   return (
@@ -142,17 +111,6 @@ export default function HistoryPage() {
           </div>
         ) : (
           <>
-            {/* 評価額トレンドチャート */}
-            {trendUrl && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                <p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-3">
-                  評価額推移（万円）
-                </p>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={trendUrl} alt="評価額推移" className="w-full rounded-lg" />
-              </div>
-            )}
-
             {/* 月別グループリスト */}
             {groups.map((group) => {
               const monthlyId = monthlyMap.get(group.monthKey);
