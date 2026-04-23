@@ -1,2 +1,53 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+/* ─── StockNote Design System ─────────────────────────────────── */
+
+@layer base {
+  body {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+/* ページ読み込み時のコンテンツ出現アニメーション
+   全ページ共通。データ取得完了後に .page-enter クラスを付与する。
+   translateY は最小限（8px）にとどめ、重力感を出しすぎない。       */
+/* ページ読み込み完了後のコンテンツ出現（opacity のみ）
+   translateY は使わない。動きは不要で、フェードだけで十分。     */
+@keyframes sn-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.page-enter {
+  animation: sn-enter 0.4s ease both;
+}
+
+/* 読み込み中パルス */
+@keyframes sn-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+.sn-pulse { animation: sn-pulse 1.6s ease-in-out infinite; }
+
+/* ─── 共通ユーティリティ ──────────────────────────────────────── */
+
+/* 数値: 等幅・詰め */
+.num { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+/* カード: hover は背景色変化のみ。移動しない。 */
+.sn-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* セクション見出し（小見出しラベル） */
+.sn-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}

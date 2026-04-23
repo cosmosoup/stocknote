@@ -150,7 +150,7 @@ export default function HomePage() {
       {/* 生成中UI */}
       {generating && (
         <div className="max-w-5xl mx-auto px-4 pt-5">
-          <div className="bg-white border border-slate-200 rounded-xl px-6 py-5 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-lg px-6 py-5 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <span className="text-slate-700 text-sm font-medium">レポートを生成中</span>
               <span className="text-slate-400 text-xs">{Math.round(progress)}%</span>
@@ -189,7 +189,7 @@ export default function HomePage() {
 
       {/* レポートなし */}
       {!loading && !reportHtml && !generating && (
-        <div className="flex flex-col items-center justify-center min-h-96 gap-4">
+        <div className="flex flex-col items-center justify-center min-h-96 gap-4 page-enter">
           <p className="text-slate-500 text-lg">まだレポートがありません</p>
           <button
             onClick={() => void handleGenerate()}
@@ -202,7 +202,7 @@ export default function HomePage() {
 
       {/* レポート表示 */}
       {reportHtml && !loading && (
-        <div className="w-full">
+        <div className="w-full page-enter">
           {summary && (
             <div className="max-w-5xl mx-auto px-4 pt-3 pb-1 text-xs text-slate-400">
               最終生成:{" "}

@@ -149,10 +149,10 @@ export default function PortfolioPage() {
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 page-enter">
 
         {/* マクロ投資戦略 */}
-        <div className="bg-white rounded-xl p-5 border border-[#b2e0e0] shadow-sm">
+        <div className="bg-white rounded-lg p-5 border border-[#b2e0e0] shadow-sm">
           <div className="flex items-start justify-between mb-3">
             <div>
               <h2 className="text-[#008b8b] font-semibold text-sm uppercase tracking-wider">
@@ -180,7 +180,7 @@ export default function PortfolioPage() {
         </div>
 
         {/* キャッシュ残高 */}
-        <div className="bg-white rounded-xl p-5 border border-[#b2e0e0] shadow-sm">
+        <div className="bg-white rounded-lg p-5 border border-[#b2e0e0] shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h2 className="text-[#008b8b] font-semibold text-sm uppercase tracking-wider">
@@ -218,7 +218,7 @@ export default function PortfolioPage() {
         </div>
 
         {/* その他資産 */}
-        <div className="bg-white rounded-xl p-5 border border-[#b2e0e0] shadow-sm">
+        <div className="bg-white rounded-lg p-5 border border-[#b2e0e0] shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h2 className="text-[#008b8b] font-semibold text-sm uppercase tracking-wider">
@@ -289,7 +289,7 @@ export default function PortfolioPage() {
         </div>
 
         {/* 銘柄追加/編集 */}
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+        <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-sm">
           <h2 className="text-slate-600 font-semibold mb-4 text-sm uppercase tracking-wider">
             {editId ? `銘柄を編集 (ID: ${editId})` : "銘柄を追加"}
           </h2>
@@ -377,17 +377,17 @@ export default function PortfolioPage() {
 
         {/* 銘柄テーブル / カード */}
         {loading ? (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
             <div className="text-slate-400 text-center py-8 text-sm">読み込み中...</div>
           </div>
         ) : items.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
             <div className="text-slate-400 text-center py-8 text-sm">銘柄が登録されていません。</div>
           </div>
         ) : (
           <>
             {/* PC: テーブル */}
-            <div className="hidden sm:block bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-sm">
+            <div className="hidden sm:block bg-white rounded-lg border border-slate-200 overflow-x-auto shadow-sm">
               <table className="w-full text-sm min-w-[640px]">
                 <thead>
                   <tr className="border-b border-slate-100">
@@ -432,7 +432,7 @@ export default function PortfolioPage() {
             {/* モバイル: カード */}
             <div className="sm:hidden space-y-2">
               {items.map((item) => (
-                <div key={item.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+                <div key={item.id} className="bg-white rounded-lg border border-slate-200 shadow-sm p-4">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-slate-900 font-bold text-base">{item.ticker}</span>
                     <div className="flex gap-4">

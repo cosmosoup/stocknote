@@ -110,7 +110,7 @@ export default function HistoryPage() {
             履歴がありません。トップページでレポートを生成してください。
           </div>
         ) : (
-          <>
+          <div className="page-enter">
             {/* 月別グループリスト */}
             {groups.map((group) => {
               const monthlyId = monthlyMap.get(group.monthKey);
@@ -136,7 +136,7 @@ export default function HistoryPage() {
                   </div>
 
                   {/* エントリーカード */}
-                  <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm divide-y divide-slate-100">
+                  <div className="bg-white rounded-lg overflow-hidden border border-slate-200 shadow-sm divide-y divide-slate-100">
                     {group.items.map((item) => {
                       const d = new Date(item.created_at);
                       const dateStr = d.toLocaleDateString("ja-JP", {
@@ -183,7 +183,7 @@ export default function HistoryPage() {
                 </div>
               );
             })}
-          </>
+          </div>
         )}
       </div>
     </div>
