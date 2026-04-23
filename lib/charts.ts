@@ -118,24 +118,38 @@ function buildBar(portfolio: PortfolioEval[]): string {
   return toUrl(config, 700, height);
 }
 
-/** ポートフォリオ vs S&P500 累積リターン + ドローダウン */
+/** ポートフォリオ vs S&P500 累積リターン + ドローダウン
+ *  - ポートフォリオ: total_pct（取得コストベース含損益%）を初日基準で相対化
+ *  - S&P500: sp500_chg を初日から複利チェーン（初日 ≈ 0%）
+ *  → 両線とも「ログ開始日からどれだけ動いたか」で揃えることで正当な比較を実現
+ */
 function buildCompare(history: HistoryPoint[]): string {
-  let portMul = 1;
+  if (history.length === 0) return "";
+
+  // 初日の total_pct を基準（0%スタート）に揃える
+  const basePct = history[0].total_pct;
   let sp500Mul = 1;
-  let peakMul = 1;
+  let peakPort = 0;
   const portData: number[] = [];
   const sp500Data: number[] = [];
   const drawdownData: number[] = [];
   const labels: string[] = [];
 
   for (const h of history) {
-    portMul *= 1 + (h.daily_pct ?? 0) / 100;
-    sp500Mul *= 1 + (h.sp500_chg ?? 0) / 100;
-    if (portMul > peakMul) peakMul = portMul;
+    // ポートフォリオ: 取得コストベースの含損益を初日差分で相対化
+    const portVal = parseFloat((h.total_pct - basePct).toFixed(2));
 
-    portData.push(parseFloat(((portMul - 1) * 100).toFixed(2)));
-    sp500Data.push(parseFloat(((sp500Mul - 1) * 100).toFixed(2)));
-    drawdownData.push(parseFloat(((portMul / peakMul - 1) * 100).toFixed(2)));
+    // S&P500: 日次リターンを複利チェーン（初日の変動も含む）
+    sp500Mul *= 1 + (h.sp500_chg ?? 0) / 100;
+    const sp500Val = parseFloat(((sp500Mul - 1) * 100).toFixed(2));
+
+    // ドローダウン: ポートフォリオラインのピークからの乖離
+    if (portVal > peakPort) peakPort = portVal;
+    const drawdown = parseFloat((portVal - peakPort).toFixed(2));
+
+    portData.push(portVal);
+    sp500Data.push(sp500Val);
+    drawdownData.push(drawdown);
     labels.push(h.date.slice(5).replace("-", "/"));
   }
 
@@ -145,7 +159,7 @@ function buildCompare(history: HistoryPoint[]): string {
       labels,
       datasets: [
         {
-          label: "ポートフォリオ",
+          label: "ポートフォリオ（含損益%・初日比）",
           data: portData,
           borderColor: "#008b8b",
           backgroundColor: "rgba(0,139,139,0.06)",
@@ -156,7 +170,7 @@ function buildCompare(history: HistoryPoint[]): string {
           yAxisID: "y",
         },
         {
-          label: "S&P 500",
+          label: "S&P 500（同期間累積）",
           data: sp500Data,
           borderColor: "#94a3b8",
           backgroundColor: "transparent",
