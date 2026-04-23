@@ -124,7 +124,13 @@ function buildBar(portfolio: PortfolioEval[]): string {
  *  両線とも「ログ開始日=0%」スタートで、同じ分母方式（現在価値ベース）を使う
  */
 function buildCompare(history: HistoryPoint[]): { url: string; portPct: number; sp500Pct: number } {
-  if (history.length === 0) return { url: "", portPct: 0, sp500Pct: 0 };
+  // 土日は市場が休場 → Yahoo Financeが前営業日と同じデータを返すため複利チェーンで二重カウントになる
+  // → 平日データのみを使用して正確な累積リターンを計算する
+  const tradingDays = history.filter(h => {
+    const day = new Date(h.date + "T12:00:00Z").getUTCDay(); // 0=日, 6=土
+    return day !== 0 && day !== 6;
+  });
+  if (tradingDays.length < 2) return { url: "", portPct: 0, sp500Pct: 0 };
 
   let portMul = 1;
   let sp500Mul = 1;
@@ -134,7 +140,7 @@ function buildCompare(history: HistoryPoint[]): { url: string; portPct: number; 
   const drawdownData: number[] = [];
   const labels: string[] = [];
 
-  for (const h of history) {
+  for (const h of tradingDays) {
     // ポートフォリオ: daily_pct（当日の価格変動ベース日次リターン）を複利チェーン
     portMul *= 1 + (h.daily_pct ?? 0) / 100;
     // S&P500: 日次リターンを複利チェーン（同じ方式）
@@ -267,11 +273,17 @@ export function buildCharts(
     bar: buildBar(portfolio),
     compare: compareResult?.url ?? "",
     sector: buildSectorBar(portfolio, market?.cash_jpy ?? 0, market?.total_jpy ?? 0),
-    compareStats: compareResult && history.length >= 2 ? {
-      portPct: compareResult.portPct,
-      sp500Pct: compareResult.sp500Pct,
-      startDate: history[0].date,
-      days: history.length,
-    } : undefined,
+    compareStats: compareResult && history.length >= 2 ? (() => {
+      const td = history.filter(h => {
+        const day = new Date(h.date + "T12:00:00Z").getUTCDay();
+        return day !== 0 && day !== 6;
+      });
+      return {
+        portPct: compareResult.portPct,
+        sp500Pct: compareResult.sp500Pct,
+        startDate: td[0]?.date ?? history[0].date,
+        days: td.length,
+      };
+    })() : undefined,
   };
 }

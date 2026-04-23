@@ -49,8 +49,13 @@ export async function buildMonthlyAggregate(): Promise<MonthlyAggregate | null> 
 
   if (error || !data || data.length < 2) return null;
 
-  // 昇順に並び替え
-  const sorted = [...data].reverse();
+  // 昇順に並び替え・週末除外（土日は市場休場のため前営業日と同一データが重複記録される）
+  const sorted = [...data].reverse().filter((r) => {
+    const day = new Date((r.created_at as string).slice(0, 10) + "T12:00:00Z").getUTCDay();
+    return day !== 0 && day !== 6; // 0=日, 6=土
+  });
+
+  if (sorted.length < 2) return null;
 
   const days: DailyPoint[] = sorted.map((r) => {
     const md = r.market_data as Record<string, number> | null;
@@ -94,7 +99,7 @@ export async function buildMonthlyAggregate(): Promise<MonthlyAggregate | null> 
     min_jpy: Math.min(...jpyValues),
     avg_daily_pct,
     volatility,
-    sp500_monthly: days.reduce((sum, d) => sum + d.sp500_chg, 0),
+    sp500_monthly: (days.reduce((mul, d) => mul * (1 + d.sp500_chg / 100), 1) - 1) * 100,
     usdjpy_start: usdjpyValues[0] ?? 0,
     usdjpy_end: usdjpyValues[usdjpyValues.length - 1] ?? 0,
     avg_vix: vixValues.length > 0 ? vixValues.reduce((a, b) => a + b, 0) / vixValues.length : 0,
@@ -197,13 +202,18 @@ function buildMonthlyHtml(agg: MonthlyAggregate, reportHtml: string): string {
   const excessReturn = agg.monthly_pct - agg.sp500_monthly;
 
   // ポートフォリオ vs S&P500 累積チャート
+  // - ポートフォリオ: daily_pct を複利チェーン（デイリーグラフと同じ方式）
+  // - S&P500: sp500_chg を複利チェーン（単純合計ではなく正確な複利計算）
+  // - 週末は既に除外済みなので二重カウントなし
   const labels = agg.days.map((d) => d.date.slice(5)); // "MM-DD"
-  let sp500Cum = 0;
+  let portMul = 1;
+  let sp500Mul = 1;
   const chartData = agg.days.map((d) => {
-    sp500Cum += d.sp500_chg;
+    portMul *= 1 + d.daily_pct / 100;
+    sp500Mul *= 1 + d.sp500_chg / 100;
     return {
-      portfolio: ((d.total_jpy - agg.start_jpy) / agg.start_jpy * 100).toFixed(2),
-      sp500: sp500Cum.toFixed(2),
+      portfolio: ((portMul - 1) * 100).toFixed(2),
+      sp500: ((sp500Mul - 1) * 100).toFixed(2),
     };
   });
 
