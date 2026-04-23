@@ -11,6 +11,26 @@ interface ReportSummary {
   total_jpy: number;
 }
 
+/* ── カウントアップ（0 → 実値、cubicイーズアウト）
+   assetsページと同じ演出をトップページにも適用して統一 ── */
+function useCountUp(target: number, duration = 800) {
+  const [val, setVal] = useState(0);
+  const rafRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (target <= 0) { setVal(0); return; }
+    const start = Date.now();
+    const tick = () => {
+      const t = Math.min((Date.now() - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      setVal(Math.round(target * ease));
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); };
+  }, [target, duration]);
+  return val;
+}
+
 const GEN_STEPS = [
   { icon: "📡", label: "市場データを取得中..." },
   { icon: "📰", label: "ニュース・為替を取得中..." },
@@ -30,6 +50,9 @@ export default function HomePage() {
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const router = useRouter();
+
+  // カウントアップ: レポートの株式評価額（万円単位）
+  const totalWan = useCountUp(summary ? Math.round(summary.total_jpy / 10000) : 0);
 
   const fetchLatestReport = useCallback(async () => {
     try {
@@ -203,10 +226,29 @@ export default function HomePage() {
       {/* レポート表示 */}
       {reportHtml && !loading && (
         <div className="w-full page-enter">
+          {/* 評価額サマリーバー（カウントアップ演出）*/}
           {summary && (
-            <div className="max-w-5xl mx-auto px-4 pt-3 pb-1 text-xs text-slate-400">
-              最終生成:{" "}
-              {new Date(summary.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}
+            <div className="max-w-5xl mx-auto px-4 pt-4 pb-2">
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-5 py-3 flex items-center flex-wrap gap-x-8 gap-y-2">
+                <div>
+                  <div className="text-slate-400 text-xs mb-0.5">株式評価額</div>
+                  <div className="num font-bold text-slate-900 text-lg">
+                    {totalWan.toLocaleString()}<span className="text-sm font-normal text-slate-500 ml-1">万円</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-slate-400 text-xs mb-0.5">本日比</div>
+                  <div className={`num font-bold text-lg ${summary.daily_pct >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                    {summary.daily_pct >= 0 ? "+" : ""}{summary.daily_pct.toFixed(2)}%
+                  </div>
+                </div>
+                <div className="ml-auto text-right">
+                  <div className="text-slate-400 text-xs">最終生成</div>
+                  <div className="text-slate-500 text-xs mt-0.5">
+                    {new Date(summary.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           <ReportIframe html={reportHtml} />

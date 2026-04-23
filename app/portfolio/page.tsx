@@ -152,7 +152,7 @@ export default function PortfolioPage() {
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 page-enter">
 
         {/* マクロ投資戦略 */}
-        <div className="bg-white rounded-lg p-5 border border-[#b2e0e0] shadow-sm">
+        <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-sm">
           <div className="flex items-start justify-between mb-3">
             <div>
               <h2 className="text-[#008b8b] font-semibold text-sm uppercase tracking-wider">
@@ -180,7 +180,7 @@ export default function PortfolioPage() {
         </div>
 
         {/* キャッシュ残高 */}
-        <div className="bg-white rounded-lg p-5 border border-[#b2e0e0] shadow-sm">
+        <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h2 className="text-[#008b8b] font-semibold text-sm uppercase tracking-wider">
@@ -218,7 +218,7 @@ export default function PortfolioPage() {
         </div>
 
         {/* その他資産 */}
-        <div className="bg-white rounded-lg p-5 border border-[#b2e0e0] shadow-sm">
+        <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h2 className="text-[#008b8b] font-semibold text-sm uppercase tracking-wider">
