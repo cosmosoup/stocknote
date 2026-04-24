@@ -109,13 +109,6 @@ function buildStackedUrl(filtered: AssetSnapshot[], mobile = false): string {
   }
   const labels = data.map(h => h.date.slice(5).replace("-", "/"));
 
-  // y軸の最小値を計算 — 合計の90%をフロアに設定して下余白を除去
-  const totals = data.map(h =>
-    BREAKDOWN.reduce((sum, b) => sum + (+(h[b.key as keyof AssetSnapshot] as number)) / 10000, 0)
-  );
-  const minTotal = Math.min(...totals);
-  const yMin = Math.max(0, Math.floor(minTotal * 0.90 / 100) * 100);
-
   const datasets = BREAKDOWN.map(b => ({
     label: b.label,
     data: data.map(h => +((+(h[b.key as keyof AssetSnapshot] as number)) / 10000).toFixed(1)),
@@ -132,7 +125,7 @@ function buildStackedUrl(filtered: AssetSnapshot[], mobile = false): string {
     options: {
       scales: {
         x: { stacked: true, ticks: { color: "#64748b", font: { size: mobile ? 11 : 12 }, maxTicksLimit: mobile ? 6 : 10 }, grid: { display: false } },
-        y: { stacked: true, min: yMin, ticks: { color: "#94a3b8", font: { size: mobile ? 11 : 12 } }, grid: { color: "#f1f5f9" } },
+        y: { stacked: true, ticks: { color: "#94a3b8", font: { size: mobile ? 11 : 12 } }, grid: { color: "#f1f5f9" } },
       },
       plugins: {
         legend: { labels: { color: "#64748b", font: { size: mobile ? 11 : 12 }, padding: 12, boxWidth: 12, boxHeight: 12 } },
