@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { AssetSnapshot } from "@/types";
+import MobileNav from "@/app/_components/MobileNav";
 
 const QUICKCHART = "https://quickchart.io/chart";
 
@@ -10,8 +11,8 @@ const BREAKDOWN = [
   { key: "stocks_jpy",    label: "株式",           color: "#008b8b" },
   { key: "trust_jpy",     label: "投資信託",       color: "#3b82f6" },
   { key: "btc_jpy",       label: "BTC",            color: "#f59e0b" },
-  { key: "cash_jpy",      label: "現金",           color: "#10b981" },
-  { key: "free_cash_jpy", label: "投資待機資金",   color: "#94a3b8" },
+  { key: "cash_jpy",      label: "投資資金",         color: "#10b981" },
+  { key: "free_cash_jpy", label: "現金",            color: "#94a3b8" },
 ] as const;
 
 type Period = "1m" | "3m" | "6m" | "1y" | "ytd" | "all";
@@ -65,7 +66,7 @@ function WanCount({ jpy, d = 1 }: { jpy: number; d?: number }) {
 }
 
 /* ① 資産配分ドーナツ ── datalabelsを無効化して視認性向上、凡例は下 */
-function buildDonutUrl(snap: AssetSnapshot): string {
+function buildDonutUrl(snap: AssetSnapshot, mobile = false): string {
   const entries = BREAKDOWN
     .map(b => ({ label: b.label, value: +(snap[b.key as keyof AssetSnapshot] as number), color: b.color }))
     .filter(e => e.value > 0);
@@ -94,11 +95,11 @@ function buildDonutUrl(snap: AssetSnapshot): string {
       },
     },
   };
-  return `${QUICKCHART}?c=${encodeURIComponent(JSON.stringify(cfg))}&backgroundColor=%23ffffff&width=380&height=320&v=3`;
+  return `${QUICKCHART}?c=${encodeURIComponent(JSON.stringify(cfg))}&backgroundColor=%23ffffff&width=${mobile ? 360 : 380}&height=${mobile ? 290 : 320}&v=3`;
 }
 
 /* ⑥ 積み上げ面グラフ（折れ線stacked） */
-function buildStackedUrl(filtered: AssetSnapshot[]): string {
+function buildStackedUrl(filtered: AssetSnapshot[], mobile = false): string {
   if (filtered.length < 2) return "";
   // データが多い場合はサンプリング（URL長対策）
   let data = filtered;
@@ -122,16 +123,16 @@ function buildStackedUrl(filtered: AssetSnapshot[]): string {
     data: { labels, datasets },
     options: {
       scales: {
-        x: { stacked: true, ticks: { color: "#64748b", font: { size: 12 }, maxTicksLimit: 10 }, grid: { display: false } },
-        y: { stacked: true, ticks: { color: "#94a3b8", font: { size: 12 } }, grid: { color: "#f1f5f9" } },
+        x: { stacked: true, ticks: { color: "#64748b", font: { size: mobile ? 11 : 12 }, maxTicksLimit: mobile ? 6 : 10 }, grid: { display: false } },
+        y: { stacked: true, ticks: { color: "#94a3b8", font: { size: mobile ? 11 : 12 } }, grid: { color: "#f1f5f9" } },
       },
       plugins: {
-        legend: { labels: { color: "#64748b", font: { size: 12 }, padding: 12, boxWidth: 12, boxHeight: 12 } },
+        legend: { labels: { color: "#64748b", font: { size: mobile ? 11 : 12 }, padding: 12, boxWidth: 12, boxHeight: 12 } },
         datalabels: { display: false },
       },
     },
   };
-  return `${QUICKCHART}?c=${encodeURIComponent(JSON.stringify(cfg))}&backgroundColor=%23ffffff&width=700&height=290&v=3`;
+  return `${QUICKCHART}?c=${encodeURIComponent(JSON.stringify(cfg))}&backgroundColor=%23ffffff&width=${mobile ? 400 : 700}&height=${mobile ? 260 : 290}&v=3`;
 }
 
 /* ── メインコンポーネント ── */
@@ -140,6 +141,15 @@ export default function AssetsPage() {
   const [loading, setLoading] = useState(true);
   const [entered, setEntered] = useState(false);
   const [period, setPeriod] = useState<Period>("all");  // ⑥ 期間フィルター
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    setIsMobile(mq.matches);
+    const h = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", h);
+    return () => mq.removeEventListener("change", h);
+  }, []);
 
   useEffect(() => {
     fetch("/api/assets")
@@ -167,8 +177,8 @@ export default function AssetsPage() {
     : [];
 
   const filteredHistory = filterByPeriod(history, period);
-  const donutUrl  = latest ? buildDonutUrl(latest) : "";
-  const stackedUrl = buildStackedUrl(filteredHistory);
+  const donutUrl  = latest ? buildDonutUrl(latest, isMobile) : "";
+  const stackedUrl = buildStackedUrl(filteredHistory, isMobile);
 
   return (
     <>
@@ -177,10 +187,11 @@ export default function AssetsPage() {
         @media (min-width: 640px) { .chart-grid { grid-template-columns: 3fr 2fr; } }
       `}</style>
 
-      <div className="min-h-screen bg-slate-100">
+      <div className="min-h-screen bg-slate-100 pb-20 sm:pb-0">
 
         {/* Nav */}
-        <nav className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+        <div className="hidden sm:block sticky top-0 z-10">
+        <nav className="bg-white border-b border-slate-200 shadow-sm">
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <a href="/">
@@ -198,6 +209,7 @@ export default function AssetsPage() {
             </div>
           </div>
         </nav>
+        </div>
 
         <div className="max-w-5xl mx-auto px-4 py-6">
 
@@ -349,6 +361,7 @@ export default function AssetsPage() {
             </div>
           )}
         </div>
+        <MobileNav active="/assets" />
       </div>
     </>
   );

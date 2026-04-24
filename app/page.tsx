@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import MobileNav from "@/app/_components/MobileNav";
 
 interface ReportSummary {
   id: number;
@@ -90,9 +91,10 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-slate-100 pb-20 sm:pb-0">
       {/* ナビゲーション */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+      <div className="hidden sm:block sticky top-0 z-10">
+      <nav className="bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <a href="/" className="flex items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -137,6 +139,7 @@ export default function HomePage() {
           </div>
         </div>
       </nav>
+      </div>
 
       {/* エラー */}
       {error && (
@@ -206,6 +209,7 @@ export default function HomePage() {
           <ReportIframe html={reportHtml} />
         </div>
       )}
+      <MobileNav active="/" onGenerate={() => void handleGenerate()} generating={generating} />
     </div>
   );
 }

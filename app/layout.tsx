@@ -4,6 +4,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "StockNote",
   description: "AI-powered personal portfolio daily report",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+    shortcut: "/logo.png",
+  },
 };
 
 export default function RootLayout({

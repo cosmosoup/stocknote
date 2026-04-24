@@ -171,40 +171,12 @@ export function buildHtml(
   let chartCompare = "";
   if (charts.compare && charts.compareStats) {
     const cs = charts.compareStats;
-    const diff = cs.portPct - cs.sp500Pct;
-    const isWinning = diff >= 0;
-    const verdict = isWinning
-      ? `<span style="color:#008b8b;font-weight:700">▲ ${diff >= 0 ? "+" : ""}${diff.toFixed(2)}% アウトパフォーム</span>`
-      : `<span style="color:#dc2626;font-weight:700">▼ ${diff.toFixed(2)}% アンダーパフォーム</span>`;
     const startLabel = cs.startDate.slice(5).replace("-", "/");
 
     chartCompare = `<div class="chart-block">
       <div class="chart-label">ポートフォリオ vs S&amp;P 500（${startLabel}〜 累積リターン%）</div>
 
-      <!-- 読み方ガイド -->
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:12px;font-size:0.82rem">
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
-          <div style="text-align:center">
-            <div style="color:#94a3b8;font-size:0.65rem;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px">ポートフォリオ（${startLabel}〜）</div>
-            <div style="font-size:1.2rem;font-weight:700;color:${cs.portPct >= 0 ? "#008b8b" : "#dc2626"}">${cs.portPct >= 0 ? "+" : ""}${cs.portPct.toFixed(2)}%</div>
-          </div>
-          <div style="text-align:center;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0">
-            <div style="color:#94a3b8;font-size:0.65rem;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px">S&amp;P 500（同期間）</div>
-            <div style="font-size:1.2rem;font-weight:700;color:${cs.sp500Pct >= 0 ? "#64748b" : "#dc2626"}">${cs.sp500Pct >= 0 ? "+" : ""}${cs.sp500Pct.toFixed(2)}%</div>
-          </div>
-          <div style="text-align:center">
-            <div style="color:#94a3b8;font-size:0.65rem;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px">差（${cs.days}日間）</div>
-            <div style="font-size:1.1rem;font-weight:700">${verdict}</div>
-          </div>
-        </div>
-        <div style="border-top:1px solid #e2e8f0;padding-top:8px;color:#94a3b8;font-size:0.72rem;line-height:1.6">
-          <strong style="color:#64748b">グラフの見方：</strong>
-          青緑の線（ポートフォリオ）が灰色点線（S&amp;P500）より<strong style="color:#64748b">上にあれば指数に勝っている</strong>、下にあれば負けている。
-          赤シェードはポートフォリオの期間最高値からの下落幅（ドローダウン）。
-          ※ 日次リターン（価格変動ベース）の複利累積。入金・ポジション変更は直接影響しない。
-        </div>
-      </div>
-
+      <div style="font-size:0.68rem;color:#94a3b8;margin-bottom:6px">縦軸：累積リターン（%）　青緑 = ポートフォリオ　灰点線 = S&amp;P500　赤シェード = ドローダウン</div>
       <img src="${charts.compare}" alt="vs S&P500" class="chart-img">
     </div>`;
   }
@@ -282,9 +254,12 @@ export function buildHtml(
     .hero-item { padding: 0; border-left: none; }
     .hero-item:nth-child(1) { grid-column: 1 / -1; }
     .hero-value { font-size: 1.3rem; }
+    .hero-sub { font-size: 0.78rem; }
     .section { padding: 14px; border-radius: 10px; margin-bottom: 12px; }
     /* AI レポート内テーブルをスクロール可能に */
     .report table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .mkt-grid { grid-template-columns: repeat(2, 1fr); }
+    .chart-img { border-radius: 6px; }
   }
 
   /* ── セクション ── */

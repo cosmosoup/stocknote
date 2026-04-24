@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import MobileNav from "@/app/_components/MobileNav";
 import type { PortfolioItem } from "@/types";
 
 const EMPTY_FORM: Partial<PortfolioItem> = {
@@ -136,8 +137,9 @@ export default function PortfolioPage() {
   const isJp = (ticker: string) => /^\d{4}$/.test(ticker);
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+    <div className="min-h-screen bg-slate-100 pb-20 sm:pb-0">
+      <div className="hidden sm:block sticky top-0 z-10">
+      <nav className="bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <a href="/" className="text-slate-500 hover:text-slate-900 text-sm">← 最新レポート</a>
@@ -148,6 +150,7 @@ export default function PortfolioPage() {
           </button>
         </div>
       </nav>
+      </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 page-enter">
 
@@ -184,10 +187,10 @@ export default function PortfolioPage() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h2 className="text-[#008b8b] font-semibold text-sm uppercase tracking-wider">
-                💴 現金残高
+                💴 投資資金残高
               </h2>
               <p className="text-slate-400 text-xs mt-1">
-                円建て現金残高。構成比チャートとAI分析に反映されます。
+                円建て投資資金残高。構成比チャートとAI分析に反映されます。
               </p>
             </div>
             <button
@@ -225,7 +228,7 @@ export default function PortfolioPage() {
                 🏦 その他資産
               </h2>
               <p className="text-slate-400 text-xs mt-1">
-                投資信託・BTC・投資待機資金。次回レポート生成時に総資産として記録されます。
+                投資信託・BTC・現金。次回レポート生成時に総資産として記録されます。
               </p>
             </div>
             <button
@@ -270,7 +273,7 @@ export default function PortfolioPage() {
               <p className="text-slate-400 text-xs mt-1">価格は自動取得（CoinGecko）</p>
             </div>
             <div>
-              <label className="text-slate-400 text-xs block mb-1">投資待機資金（円）</label>
+              <label className="text-slate-400 text-xs block mb-1">現金（円）</label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -468,6 +471,7 @@ export default function PortfolioPage() {
           </>
         )}
       </div>
+      <MobileNav active="/portfolio" />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import MobileNav from "@/app/_components/MobileNav";
 
 interface MonthlyReportData {
   id: number;
@@ -80,9 +81,10 @@ export default function MonthlyDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-slate-100 pb-20 sm:pb-0">
       {/* ── ナビ ── */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+      <div className="hidden sm:block sticky top-0 z-10">
+      <nav className="bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* 左: モバイルはシンプル戻るリンク / PC はフルパンくず */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -132,6 +134,7 @@ export default function MonthlyDetailPage() {
           </div>
         </div>
       </nav>
+      </div>
 
       {/* ── コンテンツ ── */}
       {loading && (
@@ -150,6 +153,7 @@ export default function MonthlyDetailPage() {
       )}
 
       {data && !loading && <ReportIframe html={data.report_html} />}
+      <MobileNav active="/history" />
     </div>
   );
 }

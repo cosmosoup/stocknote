@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import MobileNav from "@/app/_components/MobileNav";
 
 interface MonthlyItem {
   id: number;
@@ -76,9 +77,10 @@ export default function MonthlyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-slate-100 pb-20 sm:pb-0">
       {/* ── ナビ ── */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+      <div className="hidden sm:block sticky top-0 z-10">
+      <nav className="bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-4">
             <a href="/" className="text-slate-500 hover:text-slate-900 text-xs sm:text-sm transition-colors">
@@ -118,6 +120,7 @@ export default function MonthlyPage() {
           </div>
         </div>
       </nav>
+      </div>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
         {/* エラー */}
@@ -199,6 +202,7 @@ export default function MonthlyPage() {
           </div>
         )}
       </div>
+      <MobileNav active="/history" />
     </div>
   );
 }

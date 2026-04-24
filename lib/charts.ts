@@ -30,14 +30,14 @@ function buildAllocationBar(portfolio: PortfolioEval[], cashJpy = 0, totalJpyWan
     const grandTotalJpy = totalJpyWan * 10000 + cashJpy;
     const cashWeight = parseFloat(((cashJpy / grandTotalJpy) * 100).toFixed(1));
     if (cashWeight > 0.1) {
-      labels.push("現金");
+      labels.push("投資資金");
       data.push(cashWeight);
     }
   }
 
   // キャッシュは薄いグレーで表示
   const bgColors = labels.map((l, i) =>
-    l === "現金" ? "#cbd5e1" : COLORS[i % COLORS.length]
+    l === "投資資金" ? "#cbd5e1" : COLORS[i % COLORS.length]
   );
 
   const config = {
@@ -60,12 +60,12 @@ function buildAllocationBar(portfolio: PortfolioEval[], cashJpy = 0, totalJpyWan
       },
       scales: {
         x: {
-          ticks: { color: "#94a3b8", font: { size: 10 } },
+          ticks: { color: "#94a3b8", font: { size: 11 } },
           grid: { color: "#e2e8f0" },
           max: Math.ceil(Math.max(...data) * 1.2),
         },
         y: {
-          ticks: { color: "#334155", font: { size: 11 } },
+          ticks: { color: "#334155", font: { size: 12 } },
           grid: { display: false },
         },
       },
@@ -103,11 +103,11 @@ function buildBar(portfolio: PortfolioEval[]): string {
       plugins: { legend: { display: false } },
       scales: {
         x: {
-          ticks: { color: "#94a3b8", font: { size: 10 } },
+          ticks: { color: "#94a3b8", font: { size: 11 } },
           grid: { color: "#e2e8f0" },
         },
         y: {
-          ticks: { color: "#334155", font: { size: 11 } },
+          ticks: { color: "#334155", font: { size: 12 } },
           grid: { display: false },
         },
       },
@@ -199,16 +199,16 @@ function buildCompare(history: HistoryPoint[]): { url: string; portPct: number; 
     options: {
       plugins: {
         legend: {
-          labels: { color: "#64748b", font: { size: 11 }, boxWidth: 16 },
+          labels: { color: "#64748b", font: { size: 12 }, boxWidth: 16 },
         },
       },
       scales: {
         x: {
-          ticks: { color: "#94a3b8", font: { size: 10 }, maxTicksLimit: 12 },
+          ticks: { color: "#94a3b8", font: { size: 11 }, maxTicksLimit: 12 },
           grid: { color: "#e2e8f0" },
         },
         y: {
-          ticks: { color: "#94a3b8", font: { size: 10 } },
+          ticks: { color: "#94a3b8", font: { size: 11 } },
           grid: { color: "#e2e8f0" },
         },
       },
@@ -251,8 +251,8 @@ function buildSectorBar(portfolio: PortfolioEval[], cashJpy = 0, totalJpyWan = 0
       indexAxis: "y",
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { color: "#e2e8f0" } },
-        y: { ticks: { color: "#334155", font: { size: 11 } }, grid: { display: false } },
+        x: { ticks: { color: "#94a3b8", font: { size: 11 } }, grid: { color: "#e2e8f0" } },
+        y: { ticks: { color: "#334155", font: { size: 12 } }, grid: { display: false } },
       },
     },
   };
