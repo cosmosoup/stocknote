@@ -148,12 +148,21 @@ export function buildHtml(
     const priceStr = e.is_jpy
       ? `${fmt(e.current_price, 0)}円`
       : `${fmt(e.current_price, 2)}USD`;
+    // 評価額（円換算）: JP株は円建てそのまま、US株はUSD×為替レート
+    const holdingJpy = e.is_jpy
+      ? e.current_price * e.shares
+      : e.current_price * e.shares * market.usdjpy;
+    const holdingWan = holdingJpy / 10000;
+    const holdingStr = holdingWan >= 1
+      ? `${fmt(holdingWan, 0)}万円`
+      : `${fmt(holdingJpy, 0)}円`;
     const gainPctStr = fmtPct(e.gain_pct);
     const gainBar = Math.min(Math.abs(e.gain_pct), 20) * 5;
     const gainBarColor = e.gain_pct >= 0 ? "#008b8b" : "#dc2626";
     return `
     <tr>
       <td><strong style="color:#1e293b;font-size:0.95rem;font-weight:600">${escHtml(e.ticker)}</strong></td>
+      <td style="color:#1e293b;font-weight:600;white-space:nowrap">${escHtml(holdingStr)}</td>
       <td style="color:#475569">${escHtml(priceStr)}</td>
       <td style="color:${pctColorLight(e.change_pct)};font-weight:500">${fmtPct(e.change_pct)}</td>
       <td style="color:${pctColorLight(e.gain_jpy)};font-weight:500">${e.gain_jpy >= 0 ? "+" : ""}${fmt(e.gain_jpy / 10000, 1)}万</td>
@@ -470,10 +479,11 @@ export function buildHtml(
   <div class="section">
     <div class="section-title">保有銘柄</div>
     <div class="table-wrap">
-      <table style="min-width:480px">
+      <table style="min-width:560px">
         <thead>
           <tr>
             <th>銘柄</th>
+            <th>評価額</th>
             <th>現在値</th>
             <th>前日比</th>
             <th>含損益</th>
