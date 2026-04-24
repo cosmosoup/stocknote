@@ -450,18 +450,18 @@ export function buildHtml(
     <div class="hero-grid">
       <div class="hero-item">
         <div class="hero-label">評価額</div>
-        <div class="hero-value" style="color:#f8fafc">${escHtml(fmt(market.total_jpy + (market.cash_jpy ?? 0) / 10000, 0))}万円</div>
-        ${(market.cash_jpy ?? 0) > 0 ? `<div class="hero-sub" style="color:#64748b">うち株式 ${escHtml(fmt(market.total_jpy, 0))}万円</div>` : ""}
+        <div class="hero-value" style="color:#f8fafc"><span class="cntup" data-val="${(market.total_jpy + (market.cash_jpy ?? 0) / 10000).toFixed(0)}" data-dec="0">0</span>万円</div>
+        ${(market.cash_jpy ?? 0) > 0 ? `<div class="hero-sub" style="color:#64748b">うち株式 <span class="cntup" data-val="${market.total_jpy.toFixed(0)}" data-dec="0">0</span>万円</div>` : ""}
       </div>
       <div class="hero-item">
         <div class="hero-label">本日損益</div>
-        <div class="hero-value" style="color:${pctColor(market.daily_pct)}">${market.daily_gain_jpy >= 0 ? "+" : ""}${escHtml(fmt(market.daily_gain_jpy, 1))}万円</div>
-        <div class="hero-sub" style="color:${pctColor(market.daily_pct)}">${escHtml(fmtPct(market.daily_pct))}</div>
+        <div class="hero-value" style="color:${pctColor(market.daily_pct)}"><span class="cntup" data-val="${market.daily_gain_jpy.toFixed(1)}" data-dec="1" data-sign="1">0</span>万円</div>
+        <div class="hero-sub" style="color:${pctColor(market.daily_pct)}"><span class="cntup" data-val="${market.daily_pct.toFixed(2)}" data-dec="2" data-sign="1">0</span>%</div>
       </div>
       <div class="hero-item">
         <div class="hero-label">通算損益</div>
-        <div class="hero-value" style="color:${pctColor(market.total_pct)}">${market.total_gain_jpy >= 0 ? "+" : ""}${escHtml(fmt(market.total_gain_jpy, 1))}万円</div>
-        <div class="hero-sub" style="color:${pctColor(market.total_pct)}">${escHtml(fmtPct(market.total_pct))}</div>
+        <div class="hero-value" style="color:${pctColor(market.total_pct)}"><span class="cntup" data-val="${market.total_gain_jpy.toFixed(1)}" data-dec="1" data-sign="1">0</span>万円</div>
+        <div class="hero-sub" style="color:${pctColor(market.total_pct)}"><span class="cntup" data-val="${market.total_pct.toFixed(2)}" data-dec="2" data-sign="1">0</span>%</div>
       </div>
     </div>
   </div>
@@ -518,6 +518,33 @@ export function buildHtml(
   </div>
 
 </div>
+<script>
+(function(){
+  var els = document.querySelectorAll('.cntup');
+  var dur = 1200;
+  var t0 = performance.now();
+  function ease(t) { return 1 - Math.pow(1 - t, 3); }
+  function fmtNum(val, dec, sign) {
+    var neg = val < 0, abs = Math.abs(val);
+    var s = abs.toFixed(dec);
+    var p = s.split('.');
+    p[0] = p[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');
+    s = p.join('.');
+    return sign ? (neg ? '-' : '+') + s : neg ? '-' + s : s;
+  }
+  function tick(now) {
+    var t = Math.min((now - t0) / dur, 1), e = ease(t);
+    els.forEach(function(el) {
+      var v = parseFloat(el.getAttribute('data-val') || '0');
+      var d = parseInt(el.getAttribute('data-dec') || '0', 10);
+      var sg = el.getAttribute('data-sign') === '1';
+      el.textContent = fmtNum(v * e, d, sg);
+    });
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
 </body>
 </html>`;
 }
