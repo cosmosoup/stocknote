@@ -1,4 +1,4 @@
-import type { MarketData, Charts } from "@/types";
+import type { MarketData, Charts, NewsItem } from "@/types";
 import { escHtml } from "./markdown";
 
 function fmt(n: number, decimals = 2): string {
@@ -81,7 +81,8 @@ function buildFearGreedMeter(score: number): string {
 export function buildHtml(
   market: MarketData,
   reportHtml: string,
-  charts: Charts
+  charts: Charts,
+  news: NewsItem[] = []
 ): string {
   const now = new Date(market.generated_at);
   const dateStr = now.toLocaleString("ja-JP", {
@@ -189,6 +190,38 @@ export function buildHtml(
       <img src="${charts.compare}" alt="vs S&P500" class="chart-img">
     </div>`;
   }
+
+  // ── ニューストピックスHTML ──
+  const newsItemsHtml = news.slice(0, 10).map((n) => {
+    let timeStr = "";
+    if (n.pubDate) {
+      try {
+        timeStr = new Date(n.pubDate).toLocaleTimeString("ja-JP", {
+          timeZone: "Asia/Tokyo",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      } catch { /* ignore */ }
+    }
+    const summaryText = n.summary ? n.summary.slice(0, 160) + (n.summary.length > 160 ? "…" : "") : "";
+    return `
+    <li class="news-item">
+      <div class="news-meta">
+        <span class="news-source">${escHtml(n.source)}</span>
+        ${timeStr ? `<span class="news-time">${escHtml(timeStr)} JST</span>` : ""}
+      </div>
+      <div class="news-title">${escHtml(n.title)}</div>
+      ${summaryText ? `<div class="news-summary">${escHtml(summaryText)}</div>` : ""}
+    </li>`;
+  }).join("");
+
+  const newsSectionHtml = newsItemsHtml ? `
+  <!-- 本日のマーケットトピックス -->
+  <div class="section">
+    <div class="section-title">📰 本日のマーケットトピックス</div>
+    <ul class="news-list">${newsItemsHtml}
+    </ul>
+  </div>` : "";
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -420,6 +453,30 @@ export function buildHtml(
   .verdict-ok   { background: #e6f7f7; color: #008b8b; border-radius: 5px; padding: 1px 8px; font-weight: 600; }
   .verdict-warn { background: #fffbeb; color: #b45309; border-radius: 5px; padding: 1px 8px; font-weight: 600; }
   .verdict-ng   { background: #fef2f2; color: #dc2626; border-radius: 5px; padding: 1px 8px; font-weight: 600; }
+
+  /* ── ニューストピックス ── */
+  .news-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .news-item {
+    padding: 12px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    border-left: 3px solid #008b8b;
+  }
+  .news-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .news-source {
+    font-size: 0.62rem; color: #008b8b; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.07em;
+    background: #e6f7f7; padding: 2px 7px; border-radius: 4px;
+    white-space: nowrap;
+  }
+  .news-time { font-size: 0.65rem; color: #94a3b8; white-space: nowrap; }
+  .news-title { font-size: 0.875rem; color: #1e293b; font-weight: 500; line-height: 1.45; margin-bottom: 4px; }
+  .news-summary { font-size: 0.78rem; color: #64748b; line-height: 1.55; }
+  @media (max-width: 600px) {
+    .news-title { font-size: 0.83rem; }
+    .news-summary { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -501,6 +558,8 @@ export function buildHtml(
     <div class="section-title">AI 分析</div>
     <div class="report">${reportHtml}</div>
   </div>
+
+  ${newsSectionHtml}
 
 </div>
 <script>

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- White background (iOS clips to rounded square automatically) -->
+  <rect width="200" height="200" fill="#ffffff"/>
+
+  <!-- Book body: dark green outer cover -->
+  <rect x="18" y="22" width="164" height="148" rx="10" fill="#155c36"/>
+
+  <!-- Left page (lighter) -->
+  <rect x="22" y="26" width="77" height="140" rx="7" fill="#1a7a48"/>
+
+  <!-- Right page (slightly lighter) -->
+  <rect x="101" y="26" width="77" height="140" rx="7" fill="#1e8f52"/>
+
+  <!-- Center spine -->
+  <rect x="93" y="22" width="14" height="148" rx="5" fill="#0f3d24"/>
+
+  <!-- Book top binding -->
+  <rect x="18" y="22" width="164" height="14" rx="7" fill="#0f3d24"/>
+
+  <!-- Bar chart on left page -->
+  <rect x="32" y="122" width="14" height="32" rx="3" fill="#4ade80"/>
+  <rect x="51" y="100" width="14" height="54" rx="3" fill="#4ade80"/>
+  <rect x="70" y="111" width="14" height="43" rx="3" fill="#4ade80"/>
+
+  <!-- Trend line on right page -->
+  <polyline
+    points="112,145 128,118 148,96 167,70"
+    stroke="#4ade80"
+    stroke-width="6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+
+  <!-- Arrow head -->
+  <polygon points="167,70 153,63 160,80" fill="#4ade80"/>
+
+  <!-- Small dots on trend line -->
+  <circle cx="128" cy="118" r="4" fill="#86efac"/>
+  <circle cx="148" cy="96"  r="4" fill="#86efac"/>
+</svg>

@@ -98,8 +98,8 @@ function buildDonutUrl(snap: AssetSnapshot, mobile = false): string {
   return `${QUICKCHART}?c=${encodeURIComponent(JSON.stringify(cfg))}&backgroundColor=%23ffffff&width=${mobile ? 360 : 380}&height=${mobile ? 290 : 320}&v=3`;
 }
 
-/* ⑥ 積み上げ面グラフ（折れ線stacked） */
-function buildStackedUrl(filtered: AssetSnapshot[], mobile = false): string {
+/* ⑥ 積み上げ面グラフ（折れ線stacked）— soloKey指定時はそのデータのみ表示 */
+function buildStackedUrl(filtered: AssetSnapshot[], mobile = false, soloKey: string | null = null): string {
   if (filtered.length < 2) return "";
   // データが多い場合はサンプリング（URL長対策）
   let data = filtered;
@@ -109,7 +109,10 @@ function buildStackedUrl(filtered: AssetSnapshot[], mobile = false): string {
   }
   const labels = data.map(h => h.date.slice(5).replace("-", "/"));
 
-  const datasets = BREAKDOWN.map(b => ({
+  // soloKey が指定されている場合はそのキーのみ、なければ全て
+  const activeBreakdown = soloKey ? BREAKDOWN.filter(b => b.key === soloKey) : BREAKDOWN;
+
+  const datasets = activeBreakdown.map(b => ({
     label: b.label,
     data: data.map(h => +((+(h[b.key as keyof AssetSnapshot] as number)) / 10000).toFixed(1)),
     backgroundColor: b.color + "cc",
@@ -128,7 +131,7 @@ function buildStackedUrl(filtered: AssetSnapshot[], mobile = false): string {
         y: { stacked: true, beginAtZero: true, ticks: { color: "#94a3b8", font: { size: mobile ? 11 : 12 } }, grid: { color: "#f1f5f9" } },
       },
       plugins: {
-        legend: { labels: { color: "#64748b", font: { size: mobile ? 11 : 12 }, padding: 12, boxWidth: 12, boxHeight: 12 } },
+        legend: { display: false },  // カスタム凡例を使用するため非表示
         datalabels: { display: false },
       },
     },
@@ -143,6 +146,7 @@ export default function AssetsPage() {
   const [entered, setEntered] = useState(false);
   const [period, setPeriod] = useState<Period>("all");  // ⑥ 期間フィルター
   const [isMobile, setIsMobile] = useState(false);
+  const [soloKey, setSoloKey] = useState<string | null>(null);  // ③ 凡例クリック絞り込み
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 639px)");
@@ -179,7 +183,7 @@ export default function AssetsPage() {
 
   const filteredHistory = filterByPeriod(history, period);
   const donutUrl  = latest ? buildDonutUrl(latest, isMobile) : "";
-  const stackedUrl = buildStackedUrl(filteredHistory, isMobile);
+  const stackedUrl = buildStackedUrl(filteredHistory, isMobile, soloKey);
 
   return (
     <>
@@ -188,7 +192,7 @@ export default function AssetsPage() {
         @media (min-width: 640px) { .chart-grid { grid-template-columns: 3fr 2fr; } }
       `}</style>
 
-      <div className="min-h-screen bg-slate-100 pb-20 sm:pb-0">
+      <div className="min-h-screen bg-slate-100 pb-32 sm:pb-0">
 
         {/* Nav */}
         <div className="hidden sm:block sticky top-0 z-10">
@@ -281,9 +285,10 @@ export default function AssetsPage() {
               {/* ⑦ 2カラム: 推移(左60%) + 資産配分(右40%) */}
               {latest && (stackedUrl || donutUrl) && (
                 <div className="chart-grid">
-                  {/* 左: ⑥ 積み上げグラフ + 期間フィルター */}
+                  {/* 左: ⑥ 積み上げグラフ + 期間フィルター + カスタム凡例 */}
                   {stackedUrl && (
                     <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
+                      {/* タイトル + 期間ボタン */}
                       <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
                         <div className="sn-label">総資産推移</div>
                         <div className="flex items-center gap-1 flex-wrap">
@@ -305,6 +310,45 @@ export default function AssetsPage() {
                           ))}
                         </div>
                       </div>
+
+                      {/* ③ カスタム凡例（タップで絞り込み / 再タップで全表示） */}
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {BREAKDOWN.map(b => {
+                          const isActive = soloKey === null || soloKey === b.key;
+                          return (
+                            <button
+                              key={b.key}
+                              onClick={() => setSoloKey(soloKey === b.key ? null : b.key)}
+                              className="flex items-center gap-1.5 text-xs font-medium rounded-full transition-all"
+                              style={{
+                                padding: "3px 10px",
+                                background: isActive ? b.color + "1a" : "#f1f5f9",
+                                border: `1.5px solid ${isActive ? b.color : "#e2e8f0"}`,
+                                color: isActive ? b.color : "#94a3b8",
+                                cursor: "pointer",
+                                opacity: isActive ? 1 : 0.55,
+                              }}
+                            >
+                              <span style={{
+                                width: 8, height: 8, borderRadius: 2,
+                                background: isActive ? b.color : "#cbd5e1",
+                                display: "inline-block", flexShrink: 0,
+                              }} />
+                              {b.label}
+                            </button>
+                          );
+                        })}
+                        {soloKey !== null && (
+                          <button
+                            onClick={() => setSoloKey(null)}
+                            style={{ background: "none", border: "none", cursor: "pointer" }}
+                            className="text-xs text-slate-400 hover:text-slate-600 transition-colors px-1"
+                          >
+                            全て表示
+                          </button>
+                        )}
+                      </div>
+
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={stackedUrl} alt="総資産推移" className="w-full rounded block" loading="lazy" />
                     </div>

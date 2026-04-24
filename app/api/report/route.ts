@@ -42,7 +42,7 @@ export async function POST() {
     const charts = buildCharts(market.portfolio, history, market);
 
     // 5. HTMLビルド
-    const fullHtml = buildHtml(market, reportHtml, charts);
+    const fullHtml = buildHtml(market, reportHtml, charts, news);
 
     // 6. Supabaseに保存
     // 総資産スナップショット（失敗しても処理は続行）
