@@ -11,8 +11,8 @@ const BREAKDOWN = [
   { key: "stocks_jpy",    label: "株式",           color: "#008b8b" },
   { key: "trust_jpy",     label: "投資信託",       color: "#3b82f6" },
   { key: "btc_jpy",       label: "BTC",            color: "#f59e0b" },
-  { key: "cash_jpy",      label: "投資資金",         color: "#10b981" },
-  { key: "free_cash_jpy", label: "現金",            color: "#94a3b8" },
+  { key: "cash_jpy",      label: "投資資金",         color: "#f97316" },
+  { key: "free_cash_jpy", label: "現金",            color: "#a78bfa" },
 ] as const;
 
 type Period = "1m" | "3m" | "6m" | "1y" | "ytd" | "all";
@@ -108,6 +108,14 @@ function buildStackedUrl(filtered: AssetSnapshot[], mobile = false): string {
     data = data.filter((_, i) => i === 0 || i === filtered.length - 1 || i % step === 0);
   }
   const labels = data.map(h => h.date.slice(5).replace("-", "/"));
+
+  // y軸の最小値を計算 — 合計の90%をフロアに設定して下余白を除去
+  const totals = data.map(h =>
+    BREAKDOWN.reduce((sum, b) => sum + (+(h[b.key as keyof AssetSnapshot] as number)) / 10000, 0)
+  );
+  const minTotal = Math.min(...totals);
+  const yMin = Math.max(0, Math.floor(minTotal * 0.90 / 100) * 100);
+
   const datasets = BREAKDOWN.map(b => ({
     label: b.label,
     data: data.map(h => +((+(h[b.key as keyof AssetSnapshot] as number)) / 10000).toFixed(1)),
@@ -124,7 +132,7 @@ function buildStackedUrl(filtered: AssetSnapshot[], mobile = false): string {
     options: {
       scales: {
         x: { stacked: true, ticks: { color: "#64748b", font: { size: mobile ? 11 : 12 }, maxTicksLimit: mobile ? 6 : 10 }, grid: { display: false } },
-        y: { stacked: true, ticks: { color: "#94a3b8", font: { size: mobile ? 11 : 12 } }, grid: { color: "#f1f5f9" } },
+        y: { stacked: true, min: yMin, ticks: { color: "#94a3b8", font: { size: mobile ? 11 : 12 } }, grid: { color: "#f1f5f9" } },
       },
       plugins: {
         legend: { labels: { color: "#64748b", font: { size: mobile ? 11 : 12 }, padding: 12, boxWidth: 12, boxHeight: 12 } },

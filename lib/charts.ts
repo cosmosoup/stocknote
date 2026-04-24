@@ -35,9 +35,9 @@ function buildAllocationBar(portfolio: PortfolioEval[], cashJpy = 0, totalJpyWan
     }
   }
 
-  // キャッシュは薄いグレーで表示
+  // 投資資金はオレンジで表示（assets/page.tsx の BREAKDOWN カラーと統一）
   const bgColors = labels.map((l, i) =>
-    l === "投資資金" ? "#cbd5e1" : COLORS[i % COLORS.length]
+    l === "投資資金" ? "#f97316" : COLORS[i % COLORS.length]
   );
 
   const config = {

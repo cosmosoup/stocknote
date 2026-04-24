@@ -114,6 +114,17 @@ export default function HistoryPage() {
           </div>
         ) : (
           <div className="page-enter">
+            {/* モバイル: 月次レポートへのリンク */}
+            <div className="sm:hidden mb-4 space-y-2">
+              <a
+                href="/monthly"
+                className="flex items-center justify-between bg-white rounded-lg border border-slate-200 shadow-sm px-5 py-3.5 hover:bg-slate-50 transition-colors"
+              >
+                <span className="text-slate-700 text-sm font-medium">📅 月次レポート一覧</span>
+                <span className="text-slate-400 text-lg leading-none">›</span>
+              </a>
+            </div>
+
             {/* 月別グループリスト */}
             {groups.map((group) => {
               const monthlyId = monthlyMap.get(group.monthKey);

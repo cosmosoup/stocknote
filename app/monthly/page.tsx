@@ -123,6 +123,17 @@ export default function MonthlyPage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+        {/* モバイル: 月次レポート生成ボタン */}
+        <div className="sm:hidden">
+          <button
+            onClick={() => void handleGenerate()}
+            disabled={generating}
+            className="w-full px-4 py-3.5 bg-[#008b8b] hover:bg-[#006d6d] disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-lg font-medium transition-colors text-sm"
+          >
+            {generating ? "生成中…" : "今月の月次レポートを生成"}
+          </button>
+        </div>
+
         {/* エラー */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
