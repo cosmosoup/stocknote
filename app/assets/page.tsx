@@ -125,7 +125,7 @@ function buildStackedUrl(filtered: AssetSnapshot[], mobile = false): string {
     options: {
       scales: {
         x: { stacked: true, ticks: { color: "#64748b", font: { size: mobile ? 11 : 12 }, maxTicksLimit: mobile ? 6 : 10 }, grid: { display: false } },
-        y: { stacked: true, ticks: { color: "#94a3b8", font: { size: mobile ? 11 : 12 } }, grid: { color: "#f1f5f9" } },
+        y: { stacked: true, beginAtZero: true, ticks: { color: "#94a3b8", font: { size: mobile ? 11 : 12 } }, grid: { color: "#f1f5f9" } },
       },
       plugins: {
         legend: { labels: { color: "#64748b", font: { size: mobile ? 11 : 12 }, padding: 12, boxWidth: 12, boxHeight: 12 } },
