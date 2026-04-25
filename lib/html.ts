@@ -244,7 +244,7 @@ export function buildHtml(
       <div class="chart-label">ポートフォリオ vs S&amp;P 500（${startLabel}〜 累積リターン%）</div>
 
       <div style="font-size:0.68rem;color:#94a3b8;margin-bottom:6px">縦軸：累積リターン（%）　青緑 = ポートフォリオ　灰点線 = S&amp;P500　赤シェード = ドローダウン</div>
-      <img src="${charts.compare}" alt="vs S&P500" class="chart-img" onload="this.style.animation='chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) 0.3s both'">
+      <img src="${charts.compare}" alt="vs S&P500" class="chart-img">
     </div>`;
   }
 
@@ -581,18 +581,18 @@ export function buildHtml(
     <div class="section-title">グラフ</div>
     <div class="chart-block">
       <div class="chart-label">ポートフォリオ構成比</div>
-      <img src="${charts.alloc}" alt="構成比" class="chart-img" onload="this.style.animation='chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) both'">
+      <img src="${charts.alloc}" alt="構成比" class="chart-img">
     </div>
     <div class="chart-block">
       <div class="chart-label">銘柄別 含み損益%</div>
-      <img src="${charts.bar}" alt="銘柄別含損益" class="chart-img" onload="this.style.animation='chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) 0.15s both'">
+      <img src="${charts.bar}" alt="銘柄別含損益" class="chart-img">
     </div>
     ${buildSectorTreemapHtml(market) ? `<div class="chart-block">
       <div class="chart-label">セクター別ポートフォリオ（Finviz風）</div>
       ${buildSectorTreemapHtml(market)}
     </div>` : (charts.sector ? `<div class="chart-block">
       <div class="chart-label">セクター別配分</div>
-      <img src="${charts.sector}" alt="セクター別配分" class="chart-img" onload="this.style.animation='chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) 0.3s both'">
+      <img src="${charts.sector}" alt="セクター別配分" class="chart-img">
     </div>` : "")}
     ${chartCompare}
   </div>
@@ -629,18 +629,44 @@ export function buildHtml(
 </div>
 <script>
 (function(){
-  // セクターツリーマップのアニメーション（IntersectionObserver）
-  var tm = document.getElementById('sector-treemap');
-  if (tm) {
-    var io = new IntersectionObserver(function(entries) {
-      entries.forEach(function(e) {
-        if (e.isIntersecting) {
-          e.target.style.animation = 'chart-enter 0.55s cubic-bezier(0.22,1,0.36,1) both';
-          io.disconnect();
+  // ── チャート画像アニメーション（スクロール検知 + 画像ロード待ち） ──
+  try {
+    if (typeof IntersectionObserver !== 'undefined') {
+      document.querySelectorAll('.chart-img').forEach(function(img, idx) {
+        var el = img;
+        var anim = 'chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) ' + (idx * 0.12).toFixed(2) + 's both';
+        var inView = false;
+        var loaded = el.complete && el.naturalWidth > 0;
+        function fire() { if (inView && loaded) el.style.animation = anim; }
+        var obs = new IntersectionObserver(function(entries) {
+          if (entries[0].isIntersecting) { inView = true; fire(); obs.disconnect(); }
+        }, { threshold: 0.05 });
+        obs.observe(el);
+        if (!loaded) {
+          el.addEventListener('load', function() { loaded = true; fire(); });
+          el.addEventListener('error', function() { el.style.opacity = '1'; });
         }
       });
-    }, { threshold: 0.1 });
-    io.observe(tm);
+      // ── セクターツリーマップ（スクロール検知） ──
+      var tm = document.getElementById('sector-treemap');
+      if (tm) {
+        var tio = new IntersectionObserver(function(entries) {
+          if (entries[0].isIntersecting) {
+            tm.style.animation = 'chart-enter 0.6s cubic-bezier(0.22,1,0.36,1) both';
+            tio.disconnect();
+          }
+        }, { threshold: 0.05 });
+        tio.observe(tm);
+      }
+    } else {
+      // IntersectionObserver 非対応時: 全グラフをそのまま表示
+      document.querySelectorAll('.chart-img').forEach(function(img) { img.style.opacity = '1'; });
+      var tmFb = document.getElementById('sector-treemap');
+      if (tmFb) tmFb.style.opacity = '1';
+    }
+  } catch(e) {
+    // アニメーション失敗時も表示は維持
+    document.querySelectorAll('.chart-img').forEach(function(img) { img.style.opacity = '1'; });
   }
 
   var els = document.querySelectorAll('.cntup');

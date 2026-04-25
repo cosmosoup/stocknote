@@ -419,7 +419,7 @@ function buildMonthlyHtml(agg: MonthlyAggregate, reportHtml: string): string {
   <div class="section">
     <div class="section-title">パフォーマンス比較</div>
     <p style="color:#94a3b8;font-size:0.72rem;margin-bottom:12px">Portfolio vs S&amp;P500（期間初日を0%として累積）</p>
-    <img src="${chartUrl}" alt="月次パフォーマンス" class="chart-img" onload="this.style.animation='chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) both'">
+    <img src="${chartUrl}" alt="月次パフォーマンス" class="chart-img">
   </div>
 
   <!-- AI月次分析 -->
@@ -429,6 +429,33 @@ function buildMonthlyHtml(agg: MonthlyAggregate, reportHtml: string): string {
   </div>
 
 </div>
+<script>
+(function(){
+  try {
+    if (typeof IntersectionObserver !== 'undefined') {
+      document.querySelectorAll('.chart-img').forEach(function(img) {
+        var el = img;
+        var anim = 'chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) both';
+        var inView = false;
+        var loaded = el.complete && el.naturalWidth > 0;
+        function fire() { if (inView && loaded) el.style.animation = anim; }
+        var obs = new IntersectionObserver(function(entries) {
+          if (entries[0].isIntersecting) { inView = true; fire(); obs.disconnect(); }
+        }, { threshold: 0.05 });
+        obs.observe(el);
+        if (!loaded) {
+          el.addEventListener('load', function() { loaded = true; fire(); });
+          el.addEventListener('error', function() { el.style.opacity = '1'; });
+        }
+      });
+    } else {
+      document.querySelectorAll('.chart-img').forEach(function(img) { img.style.opacity = '1'; });
+    }
+  } catch(e) {
+    document.querySelectorAll('.chart-img').forEach(function(img) { img.style.opacity = '1'; });
+  }
+})();
+</script>
 </body>
 </html>`;
 }
