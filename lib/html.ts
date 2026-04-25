@@ -77,72 +77,6 @@ function buildFearGreedMeter(score: number): string {
   </svg>`;
 }
 
-function gainBg(pct: number): string {
-  if (pct >= 20) return "#065f46";
-  if (pct >= 10) return "#047857";
-  if (pct >= 5)  return "#059669";
-  if (pct >= 2)  return "#10b981";
-  if (pct >= 0)  return "#34d399";
-  if (pct >= -2) return "#f87171";
-  if (pct >= -5) return "#ef4444";
-  if (pct >= -10) return "#dc2626";
-  if (pct >= -20) return "#b91c1c";
-  return "#7f1d1d";
-}
-
-function buildSectorTreemapHtml(market: MarketData): string {
-  const portfolio = market.portfolio;
-  if (!portfolio || portfolio.length === 0) return "";
-  const sectorMap = new Map<string, typeof portfolio>();
-  for (const h of portfolio) {
-    const s = h.sector ?? "その他";
-    if (!sectorMap.has(s)) sectorMap.set(s, []);
-    sectorMap.get(s)!.push(h);
-  }
-  const sectors = Array.from(sectorMap.entries())
-    .map(([sector, items]) => ({
-      sector,
-      items: [...items].sort((a, b) => b.weight - a.weight),
-      sw: items.reduce((s, h) => s + h.weight, 0),
-    }))
-    .sort((a, b) => b.sw - a.sw);
-  if (sectors.length === 0) return "";
-
-  // ── 縦軸=セクター面積(flex:sw)、左列=セクターラベル、右=銘柄幅(flex:weight) ──
-  // これにより 銘柄セル面積 ∝ ポートフォリオ構成比 が成立する
-  const rows = sectors.map(({ sector, items, sw }) => {
-    const cells = items.map(h => {
-      const gainLabel = (h.gain_pct >= 0 ? "+" : "") + h.gain_pct.toFixed(1) + "%";
-      const tmData = `${escHtml(h.ticker)}|${escHtml(sector)}|${h.weight.toFixed(2)}|${h.gain_pct.toFixed(2)}`;
-      return `<div style="flex:${h.weight};min-width:18px;background:${gainBg(h.gain_pct)};border-radius:4px;padding:3px 5px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;cursor:pointer" data-tm="${tmData}">
-  <div style="font-weight:700;font-size:0.72rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none">${escHtml(h.ticker)}</div>
-  ${h.weight >= 2.5 ? `<div style="font-size:0.6rem;color:rgba(255,255,255,0.82);pointer-events:none">${h.weight.toFixed(1)}%</div>` : ""}
-  ${h.weight >= 5 ? `<div style="font-size:0.6rem;color:rgba(255,255,255,0.92);font-weight:600;pointer-events:none">${gainLabel}</div>` : ""}
-</div>`;
-    }).join("");
-    return `<div style="flex:${sw};display:flex;gap:2px;min-height:0">
-  <div style="width:68px;flex-shrink:0;display:flex;align-items:center;padding:3px 5px;background:#f8fafc;border-radius:4px;border:1px solid #e2e8f0;overflow:hidden">
-    <div style="font-size:0.56rem;font-weight:700;color:#64748b;letter-spacing:0.03em;text-transform:uppercase;word-break:break-word;line-height:1.25">${escHtml(sector)}</div>
-  </div>
-  <div style="flex:1;display:flex;gap:2px;min-width:0">${cells}</div>
-</div>`;
-  }).join("");
-
-  const legend = [
-    ["#065f46","+20%〜"],["#047857","+10%〜"],["#059669","+5%〜"],
-    ["#10b981","+2%〜"],["#34d399","0〜+2%"],["#f87171","0〜-2%"],
-    ["#dc2626","-10%〜"],["#7f1d1d","-20%〜"],
-  ].map(([bg,label]) => `<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:2px;background:${bg};display:inline-block"></span><span style="font-size:0.6rem;color:#64748b">${label}</span></span>`).join("");
-
-  return `<div style="display:flex;flex-direction:column;gap:2px;height:320px">${rows}</div>
-<div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap"><span style="font-size:0.6rem;color:#94a3b8">含損益：</span>${legend}</div>
-<div id="tm-tip" style="position:fixed;z-index:9999;display:none;background:#1e293b;color:#f8fafc;border-radius:8px;padding:10px 14px;font-size:0.78rem;font-family:-apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.4);pointer-events:none;min-width:150px;line-height:1.6">
-  <div id="tm-tip-t" style="font-weight:700;font-size:0.88rem;margin-bottom:2px"></div>
-  <div id="tm-tip-s" style="color:#94a3b8;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px"></div>
-  <div style="display:flex;justify-content:space-between;gap:16px;margin-bottom:3px"><span style="color:#94a3b8">構成比</span><span id="tm-tip-w" style="font-weight:600"></span></div>
-  <div style="display:flex;justify-content:space-between;gap:16px"><span style="color:#94a3b8">含損益</span><span id="tm-tip-g" style="font-weight:600"></span></div>
-</div>`;
-}
 
 /** HTML全体を組み立てる */
 export function buildHtml(
@@ -596,13 +530,6 @@ export function buildHtml(
       <div class="chart-label">銘柄別 含み損益%</div>
       <img src="${charts.bar}" alt="銘柄別含損益" class="chart-img">
     </div>
-    ${buildSectorTreemapHtml(market) ? `<div class="chart-block">
-      <div class="chart-label">セクター別ポートフォリオ（Finviz風）</div>
-      ${buildSectorTreemapHtml(market)}
-    </div>` : (charts.sector ? `<div class="chart-block">
-      <div class="chart-label">セクター別配分</div>
-      <img src="${charts.sector}" alt="セクター別配分" class="chart-img">
-    </div>` : "")}
     ${chartCompare}
   </div>
 
@@ -638,51 +565,6 @@ export function buildHtml(
 </div>
 <script>
 (function(){
-  // ── ツリーマップ ツールチップ ──
-  try {
-    var tip = document.getElementById('tm-tip');
-    if (tip) {
-      var tipT = document.getElementById('tm-tip-t');
-      var tipS = document.getElementById('tm-tip-s');
-      var tipW = document.getElementById('tm-tip-w');
-      var tipG = document.getElementById('tm-tip-g');
-      var activeCell = null;
-      function tmPos(x, y) {
-        var left = Math.min(x + 14, window.innerWidth - 175);
-        var top = (y - 125 < 8) ? y + 14 : y - 125;
-        tip.style.left = left + 'px';
-        tip.style.top = top + 'px';
-      }
-      function tmShow(el, x, y) {
-        var p = el.getAttribute('data-tm').split('|');
-        tipT.textContent = p[0];
-        tipS.textContent = p[1];
-        tipW.textContent = parseFloat(p[2]).toFixed(1) + '%';
-        var g = parseFloat(p[3]);
-        tipG.textContent = (g >= 0 ? '+' : '') + g.toFixed(2) + '%';
-        tipG.style.color = g >= 0 ? '#10b981' : '#f87171';
-        tmPos(x, y);
-        tip.style.display = 'block';
-      }
-      function tmHide() { tip.style.display = 'none'; activeCell = null; }
-      document.querySelectorAll('[data-tm]').forEach(function(el) {
-        el.addEventListener('mouseenter', function(e) { if (!activeCell) tmShow(el, e.clientX, e.clientY); });
-        el.addEventListener('mousemove',  function(e) { if (!activeCell) tmPos(e.clientX, e.clientY); });
-        el.addEventListener('mouseleave', function()  { if (activeCell !== el) tmHide(); });
-        el.addEventListener('click', function(e) {
-          e.stopPropagation();
-          if (activeCell === el) { tmHide(); }
-          else {
-            var r = el.getBoundingClientRect();
-            activeCell = el;
-            tmShow(el, r.left + r.width / 2, r.top);
-          }
-        });
-      });
-      document.addEventListener('click', tmHide);
-    }
-  } catch(e) {}
-
   var els = document.querySelectorAll('.cntup');
   var dur = 1200;
   var t0 = performance.now();

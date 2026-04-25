@@ -76,7 +76,7 @@ export function SectorTreemap({ holdings }: { holdings: PortfolioEval[] }) {
 
       {/* 縦軸=セクター面積(flex:sw + min-height)、左列=ラベル固定幅、右=銘柄幅(flex:weight + min-width) */}
       {/* min-height/min-width で最小視認サイズを確保しつつ、大きいものを比例スケール */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, height: 320 }}>
         {sectors.map(({ sector, items, sw }) => (
           <div key={sector} style={{ flex: sw, minHeight: 28, display: "flex", gap: 2 }}>
             {/* セクターラベル列（固定幅・常時表示） */}
