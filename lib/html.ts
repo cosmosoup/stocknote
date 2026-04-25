@@ -1,4 +1,4 @@
-import type { MarketData, Charts, NewsItem } from "@/types";
+import type { MarketData, Charts } from "@/types";
 import { escHtml } from "./markdown";
 
 function fmt(n: number, decimals = 2): string {
@@ -82,7 +82,7 @@ export function buildHtml(
   market: MarketData,
   reportHtml: string,
   charts: Charts,
-  news: NewsItem[] = []
+  topicsHtml = ""
 ): string {
   const now = new Date(market.generated_at);
   const dateStr = now.toLocaleString("ja-JP", {
@@ -191,36 +191,12 @@ export function buildHtml(
     </div>`;
   }
 
-  // ── ニューストピックスHTML ──
-  const newsItemsHtml = news.slice(0, 10).map((n) => {
-    let timeStr = "";
-    if (n.pubDate) {
-      try {
-        timeStr = new Date(n.pubDate).toLocaleTimeString("ja-JP", {
-          timeZone: "Asia/Tokyo",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      } catch { /* ignore */ }
-    }
-    const summaryText = n.summary ? n.summary.slice(0, 160) + (n.summary.length > 160 ? "…" : "") : "";
-    return `
-    <li class="news-item">
-      <div class="news-meta">
-        <span class="news-source">${escHtml(n.source)}</span>
-        ${timeStr ? `<span class="news-time">${escHtml(timeStr)} JST</span>` : ""}
-      </div>
-      <div class="news-title">${escHtml(n.title)}</div>
-      ${summaryText ? `<div class="news-summary">${escHtml(summaryText)}</div>` : ""}
-    </li>`;
-  }).join("");
-
-  const newsSectionHtml = newsItemsHtml ? `
-  <!-- 本日のマーケットトピックス -->
+  // ── AI生成トピックスセクション ──
+  // Claudeが「## 📰 本日のマーケットトピックス」として出力したMarkdownをHTMLに変換済みのものを使用
+  const newsSectionHtml = topicsHtml ? `
+  <!-- 本日のマーケットトピックス（AI生成） -->
   <div class="section">
-    <div class="section-title">📰 本日のマーケットトピックス</div>
-    <ul class="news-list">${newsItemsHtml}
-    </ul>
+    <div class="report topics-section">${topicsHtml}</div>
   </div>` : "";
 
   return `<!DOCTYPE html>
@@ -298,8 +274,9 @@ export function buildHtml(
     .hero-value { font-size: 1.3rem; }
     .hero-sub { font-size: 0.78rem; }
     .section { padding: 14px; border-radius: 10px; margin-bottom: 12px; }
-    /* AI レポート内テーブルをスクロール可能に */
-    .report table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    /* AI レポート内テーブルを横スクロール可能に（保有銘柄テーブルと同様） */
+    .report table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 520px; }
+    .report table th, .report table td { white-space: nowrap; }
     .mkt-grid { grid-template-columns: repeat(2, 1fr); }
     .chart-img { border-radius: 6px; }
   }
@@ -411,6 +388,7 @@ export function buildHtml(
   .report p { margin-bottom: 11px; color: #475569; }
   .report ul, .report ol { padding-left: 22px; margin-bottom: 11px; color: #475569; }
   .report li { margin-bottom: 4px; }
+  /* AIレポート内テーブル */
   .report table {
     margin: 12px 0;
     border-radius: 8px;
@@ -454,28 +432,49 @@ export function buildHtml(
   .verdict-warn { background: #fffbeb; color: #b45309; border-radius: 5px; padding: 1px 8px; font-weight: 600; }
   .verdict-ng   { background: #fef2f2; color: #dc2626; border-radius: 5px; padding: 1px 8px; font-weight: 600; }
 
-  /* ── ニューストピックス ── */
-  .news-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-  .news-item {
-    padding: 12px 14px;
+  /* ── トピックスセクション（AI生成・report スタイルを継承） ── */
+  .topics-section h2 {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #008b8b;
+    margin: 0 0 16px 0;
+    padding: 0;
+    background: none;
+    border-left: none;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .topics-section h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+  }
+  .topics-section ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .topics-section ul li {
+    padding: 11px 14px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     border-left: 3px solid #008b8b;
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: #475569;
   }
-  .news-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
-  .news-source {
-    font-size: 0.62rem; color: #008b8b; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.07em;
-    background: #e6f7f7; padding: 2px 7px; border-radius: 4px;
-    white-space: nowrap;
-  }
-  .news-time { font-size: 0.65rem; color: #94a3b8; white-space: nowrap; }
-  .news-title { font-size: 0.875rem; color: #1e293b; font-weight: 500; line-height: 1.45; margin-bottom: 4px; }
-  .news-summary { font-size: 0.78rem; color: #64748b; line-height: 1.55; }
-  @media (max-width: 600px) {
-    .news-title { font-size: 0.83rem; }
-    .news-summary { display: none; }
+  .topics-section ul li strong {
+    color: #1e293b;
+    font-weight: 600;
   }
 </style>
 </head>

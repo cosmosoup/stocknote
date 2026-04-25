@@ -36,13 +36,25 @@ export async function POST() {
 
     // 3. Claude APIでレポート生成
     const reportMd = await generateReport(market, news, history, macroStrategy);
-    const reportHtml = convertMdToHtml(reportMd);
+
+    // 「## 📰 本日のマーケットトピックス」セクションをAI分析と分離
+    const TOPICS_MARKER = "## 📰 本日のマーケットトピックス";
+    const markerIdx = reportMd.indexOf(TOPICS_MARKER);
+    let analysisHtml: string;
+    let topicsHtml: string;
+    if (markerIdx !== -1) {
+      analysisHtml = convertMdToHtml(reportMd.slice(0, markerIdx).trim());
+      topicsHtml   = convertMdToHtml(reportMd.slice(markerIdx).trim());
+    } else {
+      analysisHtml = convertMdToHtml(reportMd);
+      topicsHtml   = "";
+    }
 
     // 4. チャートURL生成
     const charts = buildCharts(market.portfolio, history, market);
 
-    // 5. HTMLビルド
-    const fullHtml = buildHtml(market, reportHtml, charts, news);
+    // 5. HTMLビルド（AI生成トピックスHTMLを渡す）
+    const fullHtml = buildHtml(market, analysisHtml, charts, topicsHtml);
 
     // 6. Supabaseに保存
     // 総資産スナップショット（失敗しても処理は続行）

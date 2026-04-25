@@ -10,17 +10,20 @@ const parser = new Parser({
 });
 
 const RSS_FEEDS = [
-  // マーケット・経済全般
-  { url: "https://feeds.reuters.com/reuters/marketsNews",          source: "Reuters Markets" },
-  { url: "https://feeds.reuters.com/reuters/businessNews",         source: "Reuters Business" },
-  { url: "https://feeds.reuters.com/reuters/topNews",              source: "Reuters Top News" },
+  // ── 国内ニュース ──
+  { url: "https://www3.nhk.or.jp/rss/news/cat4.xml",               source: "NHK経済" },
+  { url: "https://www3.nhk.or.jp/rss/news/cat6.xml",               source: "NHK国際" },
+  // ── 海外マーケット・経済全般 ──
+  { url: "https://feeds.reuters.com/reuters/marketsNews",           source: "Reuters Markets" },
+  { url: "https://feeds.reuters.com/reuters/businessNews",          source: "Reuters Business" },
+  { url: "https://feeds.reuters.com/reuters/topNews",               source: "Reuters Top News" },
   // CNBC（Fed動向・経済指標に強い）
   { url: "https://www.cnbc.com/id/10000664/device/rss/rss.html",   source: "CNBC Finance" },
   { url: "https://www.cnbc.com/id/20910258/device/rss/rss.html",   source: "CNBC Economy" },
   // MarketWatch（相場解説・要人発言に強い）
   { url: "https://feeds.marketwatch.com/marketwatch/topstories/",  source: "MarketWatch" },
   // Yahoo Finance（幅広いカバレッジ）
-  { url: "https://finance.yahoo.com/news/rssindex",                source: "Yahoo Finance" },
+  { url: "https://finance.yahoo.com/news/rssindex",                 source: "Yahoo Finance" },
 ];
 
 /** RSSからニュース最新20件を取得 */
