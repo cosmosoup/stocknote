@@ -210,18 +210,22 @@ function SectorTreemap({ holdings }: { holdings: PortfolioEval[] }) {
         </div>
       )}
 
-      {/* セクター縦積みマップ */}
-      <div>
-        {sectors.map(({ sector, items }) => (
-          <div key={sector} style={{ marginBottom: 5 }}>
-            <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "#64748b", letterSpacing: "0.06em", textTransform: "uppercase", padding: "0 2px 2px" }}>
-              {sector}
+      {/* 縦軸=セクター面積(flex:sw)、左列=ラベル、右=銘柄幅(flex:weight) → 面積∝構成比 */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, height: 320 }}>
+        {sectors.map(({ sector, items, sw }) => (
+          <div key={sector} style={{ flex: sw, display: "flex", gap: 2, minHeight: 0 }}>
+            {/* セクターラベル列（固定幅） */}
+            <div style={{ width: 68, flexShrink: 0, display: "flex", alignItems: "center", padding: "3px 5px", background: "#f8fafc", borderRadius: 4, border: "1px solid #e2e8f0", overflow: "hidden" }}>
+              <div style={{ fontSize: "0.56rem", fontWeight: 700, color: "#64748b", letterSpacing: "0.03em", textTransform: "uppercase", wordBreak: "break-word", lineHeight: 1.25 }}>
+                {sector}
+              </div>
             </div>
-            <div style={{ display: "flex", gap: 2 }}>
+            {/* 銘柄エリア */}
+            <div style={{ flex: 1, display: "flex", gap: 2, minWidth: 0 }}>
               {items.map(h => (
                 <div
                   key={h.ticker}
-                  style={{ flex: h.weight, minWidth: 18, background: gainBg(h.gain_pct), borderRadius: 4, padding: "4px 5px", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 38, cursor: "pointer" }}
+                  style={{ flex: h.weight, minWidth: 18, background: gainBg(h.gain_pct), borderRadius: 4, padding: "3px 5px", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center", cursor: "pointer" }}
                   onMouseEnter={e => { if (!tappedRef.current) setTip({ ticker: h.ticker, sector, weight: h.weight, gain: h.gain_pct, x: e.clientX, y: e.clientY }); }}
                   onMouseMove={e => { if (!tappedRef.current) setTip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null); }}
                   onMouseLeave={() => { if (tappedRef.current !== h.ticker) setTip(null); }}

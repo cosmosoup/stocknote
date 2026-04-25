@@ -108,20 +108,23 @@ function buildSectorTreemapHtml(market: MarketData): string {
     .sort((a, b) => b.sw - a.sw);
   if (sectors.length === 0) return "";
 
-  // セクター縦積み（各セクターが行、銘柄を横並び）
-  const rows = sectors.map(({ sector, items }) => {
+  // ── 縦軸=セクター面積(flex:sw)、左列=セクターラベル、右=銘柄幅(flex:weight) ──
+  // これにより 銘柄セル面積 ∝ ポートフォリオ構成比 が成立する
+  const rows = sectors.map(({ sector, items, sw }) => {
     const cells = items.map(h => {
       const gainLabel = (h.gain_pct >= 0 ? "+" : "") + h.gain_pct.toFixed(1) + "%";
       const tmData = `${escHtml(h.ticker)}|${escHtml(sector)}|${h.weight.toFixed(2)}|${h.gain_pct.toFixed(2)}`;
-      return `<div style="flex:${h.weight};min-width:18px;background:${gainBg(h.gain_pct)};border-radius:4px;padding:4px 5px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;min-height:38px;cursor:pointer" data-tm="${tmData}">
+      return `<div style="flex:${h.weight};min-width:18px;background:${gainBg(h.gain_pct)};border-radius:4px;padding:3px 5px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;cursor:pointer" data-tm="${tmData}">
   <div style="font-weight:700;font-size:0.72rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none">${escHtml(h.ticker)}</div>
   ${h.weight >= 2.5 ? `<div style="font-size:0.6rem;color:rgba(255,255,255,0.82);pointer-events:none">${h.weight.toFixed(1)}%</div>` : ""}
   ${h.weight >= 5 ? `<div style="font-size:0.6rem;color:rgba(255,255,255,0.92);font-weight:600;pointer-events:none">${gainLabel}</div>` : ""}
 </div>`;
     }).join("");
-    return `<div style="margin-bottom:5px">
-  <div style="font-size:0.6rem;font-weight:700;color:#64748b;letter-spacing:0.06em;text-transform:uppercase;padding:0 2px 2px">${escHtml(sector)}</div>
-  <div style="display:flex;gap:2px">${cells}</div>
+    return `<div style="flex:${sw};display:flex;gap:2px;min-height:0">
+  <div style="width:68px;flex-shrink:0;display:flex;align-items:center;padding:3px 5px;background:#f8fafc;border-radius:4px;border:1px solid #e2e8f0;overflow:hidden">
+    <div style="font-size:0.56rem;font-weight:700;color:#64748b;letter-spacing:0.03em;text-transform:uppercase;word-break:break-word;line-height:1.25">${escHtml(sector)}</div>
+  </div>
+  <div style="flex:1;display:flex;gap:2px;min-width:0">${cells}</div>
 </div>`;
   }).join("");
 
@@ -131,7 +134,7 @@ function buildSectorTreemapHtml(market: MarketData): string {
     ["#dc2626","-10%〜"],["#7f1d1d","-20%〜"],
   ].map(([bg,label]) => `<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:2px;background:${bg};display:inline-block"></span><span style="font-size:0.6rem;color:#64748b">${label}</span></span>`).join("");
 
-  return `<div>${rows}</div>
+  return `<div style="display:flex;flex-direction:column;gap:2px;height:320px">${rows}</div>
 <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap"><span style="font-size:0.6rem;color:#94a3b8">含損益：</span>${legend}</div>
 <div id="tm-tip" style="position:fixed;z-index:9999;display:none;background:#1e293b;color:#f8fafc;border-radius:8px;padding:10px 14px;font-size:0.78rem;font-family:-apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.4);pointer-events:none;min-width:150px;line-height:1.6">
   <div id="tm-tip-t" style="font-weight:700;font-size:0.88rem;margin-bottom:2px"></div>
