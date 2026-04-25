@@ -85,19 +85,19 @@ function buildSectorTreemapHtml(market: MarketData): string {
         ? `${escHtml(h.ticker)} ${h.weight.toFixed(1)}%（${gainStr}）`
         : escHtml(h.ticker);
       const tmData = `${escHtml(h.ticker)}|${escHtml(sector)}|${h.weight.toFixed(2)}|${h.gain_pct.toFixed(2)}`;
-      return `<div style="flex:${h.weight};min-width:40px;background:${gainBg(h.gain_pct)};border-radius:4px;padding:3px 5px;overflow:hidden;display:flex;align-items:center;cursor:pointer" data-tm="${tmData}"><div style="font-weight:700;font-size:0.65rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;line-height:1.3">${label}</div></div>`;
+      return `<div class="tm-cell" style="flex:${h.weight};background:${gainBg(h.gain_pct)}" data-tm="${tmData}"><div class="tm-cell-txt">${label}</div></div>`;
     }).join("");
-    return `<div style="flex:${sw};display:flex;gap:2px"><div style="width:68px;flex-shrink:0;display:flex;align-items:center;padding:3px 5px;background:#f8fafc;border-radius:4px;border:1px solid #e2e8f0;overflow:hidden"><div style="font-size:0.56rem;font-weight:700;color:#64748b;letter-spacing:0.03em;text-transform:uppercase;word-break:break-word;line-height:1.25">${escHtml(sector)}</div></div><div style="flex:1;display:flex;gap:2px;min-width:0">${cells}</div></div>`;
+    return `<div class="tm-row" style="flex:${sw}"><div class="tm-lbl"><div class="tm-lbl-txt">${escHtml(sector)}</div></div><div class="tm-cells">${cells}</div></div>`;
   }).join("");
 
   const legend = [
     ["#065f46","+20%〜"],["#047857","+10%〜"],["#059669","+5%〜"],
     ["#10b981","+2%〜"],["#34d399","0〜+2%"],["#f87171","0〜-2%"],
     ["#dc2626","-10%〜"],["#7f1d1d","-20%〜"],
-  ].map(([bg, label]) => `<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:2px;background:${bg};display:inline-block"></span><span style="font-size:0.6rem;color:#64748b">${label}</span></span>`).join("");
+  ].map(([bg, label]) => `<span class="tm-lgd-item"><span style="width:10px;height:10px;border-radius:2px;background:${bg};display:inline-block"></span><span class="tm-lgd-txt">${label}</span></span>`).join("");
 
-  return `<div style="display:flex;flex-direction:column;gap:2px;height:${containerH}px">${rows}</div>
-<div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap"><span style="font-size:0.6rem;color:#94a3b8">含損益：</span>${legend}</div>
+  return `<div class="tm-wrap" style="height:${containerH}px">${rows}</div>
+<div class="tm-legend"><span class="tm-lgd-txt" style="color:#94a3b8">含損益：</span>${legend}</div>
 <div id="tm-tip" style="position:fixed;z-index:9999;display:none;background:#1e293b;color:#f8fafc;border-radius:8px;padding:10px 14px;font-size:0.78rem;font-family:-apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.4);pointer-events:none;min-width:150px;line-height:1.6"><div id="tm-tip-t" style="font-weight:700;font-size:0.88rem;margin-bottom:2px"></div><div id="tm-tip-s" style="color:#94a3b8;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px"></div><div style="display:flex;justify-content:space-between;gap:16px;margin-bottom:3px"><span style="color:#94a3b8">構成比</span><span id="tm-tip-w" style="font-weight:600"></span></div><div style="display:flex;justify-content:space-between;gap:16px"><span style="color:#94a3b8">含損益</span><span id="tm-tip-g" style="font-weight:600"></span></div></div>`;
 }
 
@@ -335,7 +335,27 @@ export function buildHtml(
     .section { padding: 14px; border-radius: 10px; margin-bottom: 12px; }
     .mkt-grid { grid-template-columns: repeat(2, 1fr); }
     .chart-img { border-radius: 6px; }
+    /* ツリーマップ モバイル縮小 */
+    .tm-wrap { height: 240px !important; }
+    .tm-lbl { width: 46px; }
+    .tm-lbl-txt { font-size: 0.42rem; }
+    .tm-cell { min-width: 22px; }
+    .tm-cell-txt { font-size: 0.48rem; }
+    .tm-lgd-txt { font-size: 0.5rem; }
+    .tm-lgd-item span:first-child { width: 8px !important; height: 8px !important; }
   }
+
+  /* ── ツリーマップ ── */
+  .tm-wrap { display: flex; flex-direction: column; gap: 2px; }
+  .tm-row { display: flex; gap: 2px; }
+  .tm-lbl { width: 68px; flex-shrink: 0; display: flex; align-items: center; padding: 3px 5px; background: #f8fafc; border-radius: 4px; border: 1px solid #e2e8f0; overflow: hidden; }
+  .tm-lbl-txt { font-size: 0.56rem; font-weight: 700; color: #64748b; letter-spacing: 0.03em; text-transform: uppercase; word-break: break-word; line-height: 1.25; }
+  .tm-cells { flex: 1; display: flex; gap: 2px; min-width: 0; }
+  .tm-cell { min-width: 40px; border-radius: 4px; padding: 3px 5px; overflow: hidden; display: flex; align-items: center; cursor: pointer; }
+  .tm-cell-txt { font-weight: 700; font-size: 0.65rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; line-height: 1.3; }
+  .tm-legend { display: flex; align-items: center; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+  .tm-lgd-item { display: inline-flex; align-items: center; gap: 3px; }
+  .tm-lgd-txt { font-size: 0.6rem; color: #64748b; }
 
   /* ── セクション ── */
   .section {
