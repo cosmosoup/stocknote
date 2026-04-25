@@ -175,7 +175,11 @@ export default function PortfolioPage() {
           </div>
           <textarea
             value={macroStrategy}
-            onChange={(e) => setMacroStrategy(e.target.value)}
+            onCompositionEnd={(e) => setMacroStrategy(e.currentTarget.value)}
+            onChange={(e) => {
+              if ((e.nativeEvent as InputEvent).isComposing) return;
+              setMacroStrategy(e.target.value);
+            }}
             rows={6}
             placeholder={`例：\n【投資スタンス】\n1. Global Macro: 米国株(S&P500)は割高アンダーウェイト。割安な新興国（インド・南米）をオーバーウェイト。\n2. 日本株: 円キャリートレード巻き戻しリスクを警戒。ポジション最小限。`}
             className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b] resize-y placeholder:text-slate-400 leading-relaxed"
@@ -309,7 +313,11 @@ export default function PortfolioPage() {
                   <input
                     type="text"
                     value={form.ticker ?? ""}
-                    onChange={(e) => setForm({ ...form, ticker: e.target.value.toUpperCase() })}
+                    onCompositionEnd={(e) => setForm({ ...form, ticker: e.currentTarget.value.toUpperCase() })}
+                    onChange={(e) => {
+                      if ((e.nativeEvent as InputEvent).isComposing) return;
+                      setForm({ ...form, ticker: e.target.value.toUpperCase() });
+                    }}
                     placeholder="VT / 6758"
                     required
                     className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b]"
@@ -357,7 +365,11 @@ export default function PortfolioPage() {
               </label>
               <textarea
                 value={form.hypothesis ?? ""}
-                onChange={(e) => setForm({ ...form, hypothesis: e.target.value })}
+                onCompositionEnd={(e) => setForm({ ...form, hypothesis: e.currentTarget.value })}
+                onChange={(e) => {
+                  if ((e.nativeEvent as InputEvent).isComposing) return;
+                  setForm({ ...form, hypothesis: e.target.value });
+                }}
                 placeholder="例: グローバル分散コアETF、AI半導体の構造的成長..."
                 rows={2}
                 className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b] resize-none placeholder:text-slate-400"
