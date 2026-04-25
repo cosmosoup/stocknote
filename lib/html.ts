@@ -333,7 +333,8 @@ export function buildHtml(
     color: #94a3b8;
     margin-bottom: 8px;
   }
-  .chart-img { width: 100%; border-radius: 10px; display: block; border: 1px solid #f1f5f9; }
+  @keyframes chart-enter { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .chart-img { width: 100%; border-radius: 10px; display: block; border: 1px solid #f1f5f9; animation: chart-enter 0.55s cubic-bezier(0.22,1,0.36,1) both; }
 
   /* ── テーブル ── */
   table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }

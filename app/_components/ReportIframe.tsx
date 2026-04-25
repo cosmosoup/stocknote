@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 
+// チャート画像フェードインアニメーション（旧レポートにも動的注入）
+const CHART_ANIM_CSS = `
+@keyframes chart-enter { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.chart-img { animation: chart-enter 0.55s cubic-bezier(0.22,1,0.36,1) both !important; }
+`;
+
 // テーブル横スクロール用スタイル（旧レポートにも動的注入）
 const TABLE_FIX_CSS = `
 .rpt-tbl-wrap {
@@ -32,6 +38,15 @@ const TABLE_FIX_CSS = `
   border-bottom: 1px solid #f1f5f9;
 }
 `;
+
+function applyChartAnim(doc: Document) {
+  if (!doc.getElementById("__rpt_chart_anim")) {
+    const style = doc.createElement("style");
+    style.id = "__rpt_chart_anim";
+    style.textContent = CHART_ANIM_CSS;
+    (doc.head ?? doc.body).appendChild(style);
+  }
+}
 
 function applyTableScroll(doc: Document) {
   // スタイルを注入（旧レポートでもCSSが確実に当たる）
@@ -74,6 +89,7 @@ export default function ReportIframe({
       onLoad={(e) => {
         const doc = e.currentTarget.contentDocument;
         if (!doc) return;
+        applyChartAnim(doc);
         // テーブルスクロール適用（旧レポートにも有効）
         applyTableScroll(doc);
         // iframe高さをコンテンツに合わせる

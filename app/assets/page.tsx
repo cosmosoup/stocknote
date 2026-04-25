@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import type { AssetSnapshot } from "@/types";
+import type { AssetSnapshot, PortfolioEval } from "@/types";
 import MobileNav from "@/app/_components/MobileNav";
 
 const QUICKCHART = "https://quickchart.io/chart";
@@ -139,14 +139,96 @@ function buildStackedUrl(filtered: AssetSnapshot[], mobile = false, soloKey: str
   return `${QUICKCHART}?c=${encodeURIComponent(JSON.stringify(cfg))}&backgroundColor=%23ffffff&width=${mobile ? 400 : 700}&height=${mobile ? 260 : 290}&v=3`;
 }
 
+/* ── セクターツリーマップ ── */
+function gainBg(pct: number): string {
+  if (pct >= 30) return "#064e3b";
+  if (pct >= 20) return "#065f46";
+  if (pct >= 10) return "#047857";
+  if (pct >= 5)  return "#059669";
+  if (pct >= 2)  return "#10b981";
+  if (pct >= 0)  return "#34d399";
+  if (pct >= -2) return "#f87171";
+  if (pct >= -5) return "#ef4444";
+  if (pct >= -10) return "#dc2626";
+  if (pct >= -20) return "#b91c1c";
+  return "#7f1d1d";
+}
+
+function SectorTreemap({ holdings }: { holdings: PortfolioEval[] }) {
+  const sectorMap = new Map<string, PortfolioEval[]>();
+  for (const h of holdings) {
+    const s = h.sector ?? "その他";
+    if (!sectorMap.has(s)) sectorMap.set(s, []);
+    sectorMap.get(s)!.push(h);
+  }
+  const sectors = Array.from(sectorMap.entries())
+    .map(([sector, items]) => ({
+      sector,
+      items: [...items].sort((a, b) => b.weight - a.weight),
+      sw: items.reduce((s, h) => s + h.weight, 0),
+    }))
+    .sort((a, b) => b.sw - a.sw);
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 3, height: 280, overflow: "hidden" }}>
+        {sectors.map(({ sector, items, sw }) => (
+          <div key={sector} style={{ flex: sw, display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+            <div style={{ fontSize: "0.58rem", fontWeight: 700, color: "#64748b", letterSpacing: "0.06em", textTransform: "uppercase", padding: "0 2px 2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {sector}
+            </div>
+            {items.map(h => (
+              <div
+                key={h.ticker}
+                title={`${h.ticker}  構成比 ${h.weight.toFixed(1)}%  損益 ${h.gain_pct >= 0 ? "+" : ""}${h.gain_pct.toFixed(1)}%`}
+                style={{ flex: h.weight, background: gainBg(h.gain_pct), borderRadius: 4, padding: "3px 5px", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 22, cursor: "default" }}
+              >
+                <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#fff", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {h.ticker}
+                </div>
+                {h.weight >= 2.5 && (
+                  <div style={{ fontSize: "0.6rem", color: "rgba(255,255,255,0.82)", lineHeight: 1.2 }}>
+                    {h.weight.toFixed(1)}%
+                  </div>
+                )}
+                {h.weight >= 5 && (
+                  <div style={{ fontSize: "0.6rem", color: "rgba(255,255,255,0.92)", fontWeight: 600, lineHeight: 1.2 }}>
+                    {h.gain_pct >= 0 ? "+" : ""}{h.gain_pct.toFixed(1)}%
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      {/* カラースケール凡例 */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: "0.6rem", color: "#94a3b8" }}>含損益：</span>
+        {[
+          { label: "+20%〜", bg: "#065f46" }, { label: "+10%〜", bg: "#059669" },
+          { label: "+2%〜", bg: "#10b981" },  { label: "0〜+2%", bg: "#34d399" },
+          { label: "0〜-2%", bg: "#f87171" }, { label: "-10%〜", bg: "#dc2626" },
+          { label: "-20%〜", bg: "#7f1d1d" },
+        ].map(({ label, bg }) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+            <div style={{ width: 10, height: 10, borderRadius: 2, background: bg }} />
+            <span style={{ fontSize: "0.6rem", color: "#64748b" }}>{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ── メインコンポーネント ── */
 export default function AssetsPage() {
   const [history, setHistory] = useState<AssetSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
   const [entered, setEntered] = useState(false);
-  const [period, setPeriod] = useState<Period>("all");  // ⑥ 期間フィルター
+  const [period, setPeriod] = useState<Period>("all");
   const [isMobile, setIsMobile] = useState(false);
-  const [soloKey, setSoloKey] = useState<string | null>(null);  // ③ 凡例クリック絞り込み
+  const [soloKey, setSoloKey] = useState<string | null>(null);
+  const [holdings, setHoldings] = useState<PortfolioEval[]>([]);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 639px)");
@@ -167,6 +249,13 @@ export default function AssetsPage() {
         setLoading(false);
         requestAnimationFrame(() => setEntered(true));
       });
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/holdings")
+      .then(r => r.json())
+      .then((d: { holdings: PortfolioEval[] }) => setHoldings(d.holdings ?? []))
+      .catch(() => {});
   }, []);
 
   const latest  = history[history.length - 1];
@@ -350,7 +439,7 @@ export default function AssetsPage() {
                       </div>
 
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={stackedUrl} alt="総資産推移" className="w-full rounded block" loading="lazy" />
+                      <img src={stackedUrl} alt="総資産推移" className="w-full rounded block chart-anim" loading="lazy" />
                     </div>
                   )}
                   {/* 右: ① 資産配分ドーナツ */}
@@ -358,9 +447,20 @@ export default function AssetsPage() {
                     <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
                       <div className="sn-label mb-3">資産配分</div>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={donutUrl} alt="資産配分" className="w-full rounded block" loading="lazy" />
+                      <img src={donutUrl} alt="資産配分" className="w-full rounded block chart-anim" loading="lazy" />
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* セクター別ポートフォリオ ツリーマップ */}
+              {holdings.length > 0 && (
+                <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="sn-label">セクター別ポートフォリオ</div>
+                    <div style={{ fontSize: "0.65rem", color: "#94a3b8" }}>色：含損益（コストベース）</div>
+                  </div>
+                  <SectorTreemap holdings={holdings} />
                 </div>
               )}
 

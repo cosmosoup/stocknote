@@ -23,6 +23,15 @@
   animation: sn-enter 0.4s ease both;
 }
 
+/* チャート画像のフェードイン（全チャート共通） */
+@keyframes chart-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.chart-anim {
+  animation: chart-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* 読み込み中パルス */
 @keyframes sn-pulse {
   0%, 100% { opacity: 1; }
