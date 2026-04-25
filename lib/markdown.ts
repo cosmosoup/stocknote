@@ -47,7 +47,7 @@ export function convertMdToHtml(md: string): string {
           return `<tr>${cells}</tr>`;
         })
         .join("\n");
-      return `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;
+      return `<div class="rpt-tbl-wrap"><table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table></div>`;
     }
   );
 
@@ -90,7 +90,7 @@ export function convertMdToHtml(md: string): string {
       block = block.trim();
       if (!block) return "";
       // すでにブロック要素タグで始まる場合はそのまま
-      if (/^<(h[1-6]|ul|ol|table|blockquote|pre|hr)/.test(block))
+      if (/^<(h[1-6]|ul|ol|div|table|blockquote|pre|hr)/.test(block))
         return block;
       return `<p>${block.replace(/\n/g, "<br>")}</p>`;
     })

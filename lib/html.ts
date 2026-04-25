@@ -274,9 +274,6 @@ export function buildHtml(
     .hero-value { font-size: 1.3rem; }
     .hero-sub { font-size: 0.78rem; }
     .section { padding: 14px; border-radius: 10px; margin-bottom: 12px; }
-    /* AI レポート内テーブルを横スクロール可能に（保有銘柄テーブルと同様） */
-    .report table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 520px; }
-    .report table th, .report table td { white-space: nowrap; }
     .mkt-grid { grid-template-columns: repeat(2, 1fr); }
     .chart-img { border-radius: 6px; }
   }
@@ -388,16 +385,24 @@ export function buildHtml(
   .report p { margin-bottom: 11px; color: #475569; }
   .report ul, .report ol { padding-left: 22px; margin-bottom: 11px; color: #475569; }
   .report li { margin-bottom: 4px; }
-  /* AIレポート内テーブル */
-  .report table {
+  /* AIレポート内テーブル — ラッパー経由で横スクロール（保有銘柄テーブルと同方式） */
+  .rpt-tbl-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     margin: 12px 0;
     border-radius: 8px;
-    overflow: hidden;
     border: 1px solid #e2e8f0;
-    font-size: 0.82rem;
   }
-  .report table th { background: #f8fafc; text-transform: none; letter-spacing: 0; font-size: 0.8rem; font-weight: 600; color: #64748b; }
-  .report table td { color: #475569; border-bottom: 1px solid #f1f5f9; }
+  .report table {
+    margin: 0;
+    border-radius: 0;
+    overflow: visible;
+    border: none;
+    font-size: 0.82rem;
+    min-width: 520px;   /* 520px未満のビューポートで横スクロール発動 */
+  }
+  .report table th { white-space: nowrap; background: #f8fafc; text-transform: none; letter-spacing: 0; font-size: 0.8rem; font-weight: 600; color: #64748b; }
+  .report table td { white-space: normal; color: #475569; border-bottom: 1px solid #f1f5f9; }
   .report tbody tr:nth-child(even) td { background: #fafafa; }
   .report blockquote {
     border-left: 3px solid #008b8b;
