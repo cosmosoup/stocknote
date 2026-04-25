@@ -46,7 +46,7 @@ export default function PortfolioPage() {
       await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ macro_strategy: macroStrategy }),
+        body: JSON.stringify({ macro_strategy: macroRef.current?.value ?? "" }),
       });
       setMacroSaved(true);
       setTimeout(() => setMacroSaved(false), 2000);
@@ -81,8 +81,16 @@ export default function PortfolioPage() {
     } finally { setOtherSaving(false); }
   };
 
-  // IME変換中フラグ（iOS/Androidフリック入力の2重入力対策）
-  const composingRef = useRef(false);
+  // テキストエリア・テキスト入力はuncontrolledにしてIMEと干渉させない
+  const macroRef = useRef<HTMLTextAreaElement>(null);
+  const hypothesisRef = useRef<HTMLTextAreaElement>(null);
+
+  // APIロード後にテキストエリアへ反映（userが入力中でなければ）
+  useEffect(() => {
+    if (macroRef.current && document.activeElement !== macroRef.current) {
+      macroRef.current.value = macroStrategy;
+    }
+  }, [macroStrategy]);
 
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,7 +113,8 @@ export default function PortfolioPage() {
     setError(null);
     try {
       const method = editId ? "PUT" : "POST";
-      const body = editId ? { ...form, id: editId } : form;
+      const hypothesis = hypothesisRef.current?.value ?? "";
+      const body = editId ? { ...form, id: editId, hypothesis } : { ...form, hypothesis };
       const res = await fetch("/api/portfolio", {
         method, headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -119,6 +128,13 @@ export default function PortfolioPage() {
       setError(err instanceof Error ? err.message : "Error");
     } finally { setSaving(false); }
   };
+
+  // 編集・リセット時にhypothesisテキストエリアへ反映
+  useEffect(() => {
+    if (hypothesisRef.current && document.activeElement !== hypothesisRef.current) {
+      hypothesisRef.current.value = form.hypothesis ?? "";
+    }
+  }, [form.hypothesis]);
 
   const handleEdit = (item: PortfolioItem) => {
     setEditId(item.id ?? null);
@@ -177,10 +193,8 @@ export default function PortfolioPage() {
             </button>
           </div>
           <textarea
-            value={macroStrategy}
-            onCompositionStart={() => { composingRef.current = true; }}
-            onCompositionEnd={(e) => { composingRef.current = false; setMacroStrategy(e.currentTarget.value); }}
-            onChange={(e) => { if (!composingRef.current) setMacroStrategy(e.target.value); }}
+            ref={macroRef}
+            defaultValue={macroStrategy}
             rows={6}
             placeholder={`例：\n【投資スタンス】\n1. Global Macro: 米国株(S&P500)は割高アンダーウェイト。割安な新興国（インド・南米）をオーバーウェイト。\n2. 日本株: 円キャリートレード巻き戻しリスクを警戒。ポジション最小限。`}
             className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b] resize-y placeholder:text-slate-400 leading-relaxed"
@@ -314,9 +328,7 @@ export default function PortfolioPage() {
                   <input
                     type="text"
                     value={form.ticker ?? ""}
-                    onCompositionStart={() => { composingRef.current = true; }}
-                    onCompositionEnd={(e) => { composingRef.current = false; setForm({ ...form, ticker: e.currentTarget.value.toUpperCase() }); }}
-                    onChange={(e) => { if (!composingRef.current) setForm({ ...form, ticker: e.target.value.toUpperCase() }); }}
+                    onChange={(e) => setForm({ ...form, ticker: e.target.value.toUpperCase() })}
                     placeholder="VT / 6758"
                     required
                     className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b]"
@@ -363,10 +375,8 @@ export default function PortfolioPage() {
                 <span className="ml-2 text-slate-300">（この銘柄に期待している理由など）</span>
               </label>
               <textarea
-                value={form.hypothesis ?? ""}
-                onCompositionStart={() => { composingRef.current = true; }}
-                onCompositionEnd={(e) => { composingRef.current = false; setForm({ ...form, hypothesis: e.currentTarget.value }); }}
-                onChange={(e) => { if (!composingRef.current) setForm({ ...form, hypothesis: e.target.value }); }}
+                ref={hypothesisRef}
+                defaultValue={form.hypothesis ?? ""}
                 placeholder="例: グローバル分散コアETF、AI半導体の構造的成長..."
                 rows={2}
                 className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b] resize-none placeholder:text-slate-400"
