@@ -391,7 +391,10 @@ export function buildHtml(
     margin-bottom: 8px;
   }
   @keyframes chart-enter { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-  .chart-img { width: 100%; border-radius: 10px; display: block; border: 1px solid #f1f5f9; opacity:0; }
+  .chart-img { width: 100%; border-radius: 10px; display: block; border: 1px solid #f1f5f9; animation: chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) 1.2s both; }
+  .chart-img:nth-child(2) { animation-delay: 1.35s; }
+  .chart-img:nth-child(3) { animation-delay: 1.5s; }
+  .chart-img:nth-child(4) { animation-delay: 1.65s; }
 
   /* ── テーブル ── */
   table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
@@ -652,20 +655,6 @@ export function buildHtml(
     if (t < 1) requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
-})();
-</script>
-<script>
-/* グラフ画像アニメーション：画像ロード完了時に発火（タイミングを合わせるため） */
-(function(){
-  var imgs = document.querySelectorAll('.chart-img');
-  imgs.forEach(function(img, i){
-    var delay = (i * 0.12) + 's';
-    function go(){
-      img.style.animation = 'chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) ' + delay + ' both';
-    }
-    if(img.complete && img.naturalHeight > 0){ go(); }
-    else { img.addEventListener('load', go); }
-  });
 })();
 </script>
 </body>
