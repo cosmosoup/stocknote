@@ -154,24 +154,16 @@ function gainBg(pct: number): string {
   return "#7f1d1d";
 }
 
+type TipState = { ticker: string; sector: string; weight: number; gain: number; x: number; y: number } | null;
+
 function SectorTreemap({ holdings }: { holdings: PortfolioEval[] }) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [tip, setTip] = useState<TipState>(null);
+  const tappedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    el.style.opacity = "0";
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.style.animation = "chart-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both";
-          obs.disconnect();
-        }
-      },
-      { threshold: 0.4 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
+    function closeOnOutside() { tappedRef.current = null; setTip(null); }
+    document.addEventListener("click", closeOnOutside);
+    return () => document.removeEventListener("click", closeOnOutside);
   }, []);
 
   const sectorMap = new Map<string, PortfolioEval[]>();
@@ -188,38 +180,82 @@ function SectorTreemap({ holdings }: { holdings: PortfolioEval[] }) {
     }))
     .sort((a, b) => b.sw - a.sw);
 
+  const winW = typeof window !== "undefined" ? window.innerWidth : 800;
+
   return (
-    <div ref={containerRef}>
-      <div style={{ display: "flex", gap: 3, height: 280, overflow: "hidden" }}>
-        {sectors.map(({ sector, items, sw }) => (
-          <div key={sector} style={{ flex: sw, display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-            <div style={{ fontSize: "0.58rem", fontWeight: 700, color: "#64748b", letterSpacing: "0.06em", textTransform: "uppercase", padding: "0 2px 2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+    <div>
+      {/* ツールチップ */}
+      {tip && (
+        <div style={{
+          position: "fixed", zIndex: 9999, pointerEvents: "none",
+          background: "#1e293b", color: "#f8fafc", borderRadius: 8,
+          padding: "10px 14px", fontSize: "0.78rem",
+          fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.4)", minWidth: 150, lineHeight: 1.6,
+          left: Math.min(tip.x + 14, winW - 175),
+          top: tip.y - 125 < 8 ? tip.y + 14 : tip.y - 125,
+        }}>
+          <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: 2 }}>{tip.ticker}</div>
+          <div style={{ color: "#94a3b8", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>{tip.sector}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16, marginBottom: 3 }}>
+            <span style={{ color: "#94a3b8" }}>構成比</span>
+            <span style={{ fontWeight: 600 }}>{tip.weight.toFixed(1)}%</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+            <span style={{ color: "#94a3b8" }}>含損益</span>
+            <span style={{ fontWeight: 600, color: tip.gain >= 0 ? "#10b981" : "#f87171" }}>
+              {tip.gain >= 0 ? "+" : ""}{tip.gain.toFixed(2)}%
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* セクター縦積みマップ */}
+      <div>
+        {sectors.map(({ sector, items }) => (
+          <div key={sector} style={{ marginBottom: 5 }}>
+            <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "#64748b", letterSpacing: "0.06em", textTransform: "uppercase", padding: "0 2px 2px" }}>
               {sector}
             </div>
-            {items.map(h => (
-              <div
-                key={h.ticker}
-                title={`${h.ticker}  構成比 ${h.weight.toFixed(1)}%  損益 ${h.gain_pct >= 0 ? "+" : ""}${h.gain_pct.toFixed(1)}%`}
-                style={{ flex: h.weight, background: gainBg(h.gain_pct), borderRadius: 4, padding: "3px 5px", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 22, cursor: "default" }}
-              >
-                <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#fff", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {h.ticker}
+            <div style={{ display: "flex", gap: 2 }}>
+              {items.map(h => (
+                <div
+                  key={h.ticker}
+                  style={{ flex: h.weight, minWidth: 18, background: gainBg(h.gain_pct), borderRadius: 4, padding: "4px 5px", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 38, cursor: "pointer" }}
+                  onMouseEnter={e => { if (!tappedRef.current) setTip({ ticker: h.ticker, sector, weight: h.weight, gain: h.gain_pct, x: e.clientX, y: e.clientY }); }}
+                  onMouseMove={e => { if (!tappedRef.current) setTip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null); }}
+                  onMouseLeave={() => { if (tappedRef.current !== h.ticker) setTip(null); }}
+                  onClick={e => {
+                    e.stopPropagation();
+                    if (tappedRef.current === h.ticker) {
+                      tappedRef.current = null; setTip(null);
+                    } else {
+                      const r = e.currentTarget.getBoundingClientRect();
+                      tappedRef.current = h.ticker;
+                      setTip({ ticker: h.ticker, sector, weight: h.weight, gain: h.gain_pct, x: r.left + r.width / 2, y: r.top });
+                    }
+                  }}
+                >
+                  <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "#fff", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", pointerEvents: "none" }}>
+                    {h.ticker}
+                  </div>
+                  {h.weight >= 2.5 && (
+                    <div style={{ fontSize: "0.6rem", color: "rgba(255,255,255,0.82)", lineHeight: 1.2, pointerEvents: "none" }}>
+                      {h.weight.toFixed(1)}%
+                    </div>
+                  )}
+                  {h.weight >= 5 && (
+                    <div style={{ fontSize: "0.6rem", color: "rgba(255,255,255,0.92)", fontWeight: 600, lineHeight: 1.2, pointerEvents: "none" }}>
+                      {h.gain_pct >= 0 ? "+" : ""}{h.gain_pct.toFixed(1)}%
+                    </div>
+                  )}
                 </div>
-                {h.weight >= 2.5 && (
-                  <div style={{ fontSize: "0.6rem", color: "rgba(255,255,255,0.82)", lineHeight: 1.2 }}>
-                    {h.weight.toFixed(1)}%
-                  </div>
-                )}
-                {h.weight >= 5 && (
-                  <div style={{ fontSize: "0.6rem", color: "rgba(255,255,255,0.92)", fontWeight: 600, lineHeight: 1.2 }}>
-                    {h.gain_pct >= 0 ? "+" : ""}{h.gain_pct.toFixed(1)}%
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         ))}
       </div>
+
       {/* カラースケール凡例 */}
       <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 8, flexWrap: "wrap" }}>
         <span style={{ fontSize: "0.6rem", color: "#94a3b8" }}>含損益：</span>
@@ -343,13 +379,6 @@ export default function AssetsPage() {
 
           {!loading && history.length > 0 && (
             <div className={`space-y-4 ${entered ? "page-enter" : "opacity-0"}`}>
-              <style>{`
-                @keyframes chart-enter {
-                  from { opacity: 0; transform: translateY(10px); }
-                  to   { opacity: 1; transform: translateY(0); }
-                }
-                .chart-anim { animation: chart-enter 0.6s cubic-bezier(0.22,1,0.36,1) both; }
-              `}</style>
 
               {/* ── ① Hero ── */}
               {latest && (
@@ -469,8 +498,7 @@ export default function AssetsPage() {
                       </div>
 
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={stackedUrl} alt="総資産推移" className="w-full rounded block" style={{ opacity: 0 }}
-                        onLoad={e => { e.currentTarget.style.animation = "chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) both"; }} loading="lazy" />
+                      <img src={stackedUrl} alt="総資産推移" className="w-full rounded block" loading="lazy" />
                     </div>
                   )}
                   {/* 右: ① 資産配分ドーナツ */}
@@ -478,8 +506,7 @@ export default function AssetsPage() {
                     <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
                       <div className="sn-label mb-3">資産配分</div>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={donutUrl} alt="資産配分" className="w-full rounded block" style={{ opacity: 0 }}
-                        onLoad={e => { e.currentTarget.style.animation = "chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) 0.12s both"; }} loading="lazy" />
+                      <img src={donutUrl} alt="資産配分" className="w-full rounded block" loading="lazy" />
                     </div>
                   )}
                 </div>

@@ -108,19 +108,20 @@ function buildSectorTreemapHtml(market: MarketData): string {
     .sort((a, b) => b.sw - a.sw);
   if (sectors.length === 0) return "";
 
-  const cols = sectors.map(({ sector, items, sw }) => {
-    const divs = items.map(h => {
-      const gain = (h.gain_pct >= 0 ? "+" : "") + h.gain_pct.toFixed(1) + "%";
-      const showW = h.weight >= 2.5, showG = h.weight >= 5;
-      return `<div style="flex:${h.weight};background:${gainBg(h.gain_pct)};border-radius:4px;padding:3px 5px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;min-height:20px" title="${escHtml(h.ticker)} ${h.weight.toFixed(1)}% ${gain}">
-  <div style="font-weight:700;font-size:0.72rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(h.ticker)}</div>
-  ${showW ? `<div style="font-size:0.6rem;color:rgba(255,255,255,0.82)">${h.weight.toFixed(1)}%</div>` : ""}
-  ${showG ? `<div style="font-size:0.6rem;color:rgba(255,255,255,0.92);font-weight:600">${gain}</div>` : ""}
+  // セクター縦積み（各セクターが行、銘柄を横並び）
+  const rows = sectors.map(({ sector, items }) => {
+    const cells = items.map(h => {
+      const gainLabel = (h.gain_pct >= 0 ? "+" : "") + h.gain_pct.toFixed(1) + "%";
+      const tmData = `${escHtml(h.ticker)}|${escHtml(sector)}|${h.weight.toFixed(2)}|${h.gain_pct.toFixed(2)}`;
+      return `<div style="flex:${h.weight};min-width:18px;background:${gainBg(h.gain_pct)};border-radius:4px;padding:4px 5px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;min-height:38px;cursor:pointer" data-tm="${tmData}">
+  <div style="font-weight:700;font-size:0.72rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none">${escHtml(h.ticker)}</div>
+  ${h.weight >= 2.5 ? `<div style="font-size:0.6rem;color:rgba(255,255,255,0.82);pointer-events:none">${h.weight.toFixed(1)}%</div>` : ""}
+  ${h.weight >= 5 ? `<div style="font-size:0.6rem;color:rgba(255,255,255,0.92);font-weight:600;pointer-events:none">${gainLabel}</div>` : ""}
 </div>`;
     }).join("");
-    return `<div style="flex:${sw};display:flex;flex-direction:column;gap:2px;min-width:0">
-  <div style="font-size:0.58rem;font-weight:700;color:#64748b;letter-spacing:0.06em;text-transform:uppercase;padding:0 2px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(sector)}</div>
-  <div style="display:flex;flex-direction:column;gap:2px;flex:1">${divs}</div>
+    return `<div style="margin-bottom:5px">
+  <div style="font-size:0.6rem;font-weight:700;color:#64748b;letter-spacing:0.06em;text-transform:uppercase;padding:0 2px 2px">${escHtml(sector)}</div>
+  <div style="display:flex;gap:2px">${cells}</div>
 </div>`;
   }).join("");
 
@@ -130,8 +131,14 @@ function buildSectorTreemapHtml(market: MarketData): string {
     ["#dc2626","-10%〜"],["#7f1d1d","-20%〜"],
   ].map(([bg,label]) => `<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:2px;background:${bg};display:inline-block"></span><span style="font-size:0.6rem;color:#64748b">${label}</span></span>`).join("");
 
-  return `<div id="sector-treemap" style="opacity:0"><div style="display:flex;gap:4px;height:260px;overflow:hidden">${cols}</div>
-<div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap"><span style="font-size:0.6rem;color:#94a3b8">含損益：</span>${legend}</div></div>`;
+  return `<div>${rows}</div>
+<div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap"><span style="font-size:0.6rem;color:#94a3b8">含損益：</span>${legend}</div>
+<div id="tm-tip" style="position:fixed;z-index:9999;display:none;background:#1e293b;color:#f8fafc;border-radius:8px;padding:10px 14px;font-size:0.78rem;font-family:-apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.4);pointer-events:none;min-width:150px;line-height:1.6">
+  <div id="tm-tip-t" style="font-weight:700;font-size:0.88rem;margin-bottom:2px"></div>
+  <div id="tm-tip-s" style="color:#94a3b8;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px"></div>
+  <div style="display:flex;justify-content:space-between;gap:16px;margin-bottom:3px"><span style="color:#94a3b8">構成比</span><span id="tm-tip-w" style="font-weight:600"></span></div>
+  <div style="display:flex;justify-content:space-between;gap:16px"><span style="color:#94a3b8">含損益</span><span id="tm-tip-g" style="font-weight:600"></span></div>
+</div>`;
 }
 
 /** HTML全体を組み立てる */
@@ -390,8 +397,7 @@ export function buildHtml(
     color: #94a3b8;
     margin-bottom: 8px;
   }
-  @keyframes chart-enter { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-  .chart-img { width: 100%; border-radius: 10px; display: block; border: 1px solid #f1f5f9; opacity:0; }
+  .chart-img { width: 100%; border-radius: 10px; display: block; border: 1px solid #f1f5f9; }
 
   /* ── テーブル ── */
   table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
@@ -629,45 +635,50 @@ export function buildHtml(
 </div>
 <script>
 (function(){
-  // ── チャート画像アニメーション（スクロール検知 + 画像ロード待ち） ──
+  // ── ツリーマップ ツールチップ ──
   try {
-    if (typeof IntersectionObserver !== 'undefined') {
-      document.querySelectorAll('.chart-img').forEach(function(img, idx) {
-        var el = img;
-        var anim = 'chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) ' + (idx * 0.12).toFixed(2) + 's both';
-        var inView = false;
-        var loaded = el.complete && el.naturalWidth > 0;
-        function fire() { if (inView && loaded) el.style.animation = anim; }
-        var obs = new IntersectionObserver(function(entries) {
-          if (entries[0].isIntersecting) { inView = true; fire(); obs.disconnect(); }
-        }, { threshold: 0.05 });
-        obs.observe(el);
-        if (!loaded) {
-          el.addEventListener('load', function() { loaded = true; fire(); });
-          el.addEventListener('error', function() { el.style.opacity = '1'; });
-        }
-      });
-      // ── セクターツリーマップ（スクロール検知） ──
-      var tm = document.getElementById('sector-treemap');
-      if (tm) {
-        var tio = new IntersectionObserver(function(entries) {
-          if (entries[0].isIntersecting) {
-            tm.style.animation = 'chart-enter 0.6s cubic-bezier(0.22,1,0.36,1) both';
-            tio.disconnect();
-          }
-        }, { threshold: 0.05 });
-        tio.observe(tm);
+    var tip = document.getElementById('tm-tip');
+    if (tip) {
+      var tipT = document.getElementById('tm-tip-t');
+      var tipS = document.getElementById('tm-tip-s');
+      var tipW = document.getElementById('tm-tip-w');
+      var tipG = document.getElementById('tm-tip-g');
+      var activeCell = null;
+      function tmPos(x, y) {
+        var left = Math.min(x + 14, window.innerWidth - 175);
+        var top = (y - 125 < 8) ? y + 14 : y - 125;
+        tip.style.left = left + 'px';
+        tip.style.top = top + 'px';
       }
-    } else {
-      // IntersectionObserver 非対応時: 全グラフをそのまま表示
-      document.querySelectorAll('.chart-img').forEach(function(img) { img.style.opacity = '1'; });
-      var tmFb = document.getElementById('sector-treemap');
-      if (tmFb) tmFb.style.opacity = '1';
+      function tmShow(el, x, y) {
+        var p = el.getAttribute('data-tm').split('|');
+        tipT.textContent = p[0];
+        tipS.textContent = p[1];
+        tipW.textContent = parseFloat(p[2]).toFixed(1) + '%';
+        var g = parseFloat(p[3]);
+        tipG.textContent = (g >= 0 ? '+' : '') + g.toFixed(2) + '%';
+        tipG.style.color = g >= 0 ? '#10b981' : '#f87171';
+        tmPos(x, y);
+        tip.style.display = 'block';
+      }
+      function tmHide() { tip.style.display = 'none'; activeCell = null; }
+      document.querySelectorAll('[data-tm]').forEach(function(el) {
+        el.addEventListener('mouseenter', function(e) { if (!activeCell) tmShow(el, e.clientX, e.clientY); });
+        el.addEventListener('mousemove',  function(e) { if (!activeCell) tmPos(e.clientX, e.clientY); });
+        el.addEventListener('mouseleave', function()  { if (activeCell !== el) tmHide(); });
+        el.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (activeCell === el) { tmHide(); }
+          else {
+            var r = el.getBoundingClientRect();
+            activeCell = el;
+            tmShow(el, r.left + r.width / 2, r.top);
+          }
+        });
+      });
+      document.addEventListener('click', tmHide);
     }
-  } catch(e) {
-    // アニメーション失敗時も表示は維持
-    document.querySelectorAll('.chart-img').forEach(function(img) { img.style.opacity = '1'; });
-  }
+  } catch(e) {}
 
   var els = document.querySelectorAll('.cntup');
   var dur = 1200;

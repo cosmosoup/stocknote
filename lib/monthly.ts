@@ -329,8 +329,7 @@ function buildMonthlyHtml(agg: MonthlyAggregate, reportHtml: string): string {
   .stat-label { font-size: 0.62rem; color: #94a3b8; letter-spacing: 0.04em; margin-bottom: 4px; text-transform: uppercase; }
   .stat-value { font-size: 1.15rem; font-weight: 700; color: #1e293b; }
   .stat-sub { font-size: 0.78rem; font-weight: 500; margin-top: 2px; color: #64748b; }
-  @keyframes chart-enter { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-  .chart-img { width: 100%; border-radius: 10px; display: block; border: 1px solid #f1f5f9; opacity:0; }
+  .chart-img { width: 100%; border-radius: 10px; display: block; border: 1px solid #f1f5f9; }
   .report { line-height: 1.85; }
   .report h2:first-child { margin-top: 0; margin-bottom: 20px; padding: 0 0 14px 0; border-left: none; border-radius: 0; background: none; border-bottom: 1px solid #e2e8f0; font-size: 1.0rem; font-weight: 400; color: #64748b; }
   .report h2 { font-size: 1.05rem; color: #1e293b; margin: 26px 0 11px; padding: 9px 16px; background: #f8fafc; border-left: 3px solid #008b8b; border-radius: 0 8px 8px 0; font-weight: 600; }
@@ -429,33 +428,6 @@ function buildMonthlyHtml(agg: MonthlyAggregate, reportHtml: string): string {
   </div>
 
 </div>
-<script>
-(function(){
-  try {
-    if (typeof IntersectionObserver !== 'undefined') {
-      document.querySelectorAll('.chart-img').forEach(function(img) {
-        var el = img;
-        var anim = 'chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) both';
-        var inView = false;
-        var loaded = el.complete && el.naturalWidth > 0;
-        function fire() { if (inView && loaded) el.style.animation = anim; }
-        var obs = new IntersectionObserver(function(entries) {
-          if (entries[0].isIntersecting) { inView = true; fire(); obs.disconnect(); }
-        }, { threshold: 0.05 });
-        obs.observe(el);
-        if (!loaded) {
-          el.addEventListener('load', function() { loaded = true; fire(); });
-          el.addEventListener('error', function() { el.style.opacity = '1'; });
-        }
-      });
-    } else {
-      document.querySelectorAll('.chart-img').forEach(function(img) { img.style.opacity = '1'; });
-    }
-  } catch(e) {
-    document.querySelectorAll('.chart-img').forEach(function(img) { img.style.opacity = '1'; });
-  }
-})();
-</script>
 </body>
 </html>`;
 }
