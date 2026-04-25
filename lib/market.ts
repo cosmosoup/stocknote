@@ -181,7 +181,7 @@ const ETF_SECTOR_MAP: Record<string, string> = {
   NSC: "資本財", UPS: "資本財", FDX: "資本財", WM: "資本財",
   RSG: "資本財", CSGP: "資本財", IR: "資本財", FTV: "資本財",
   GEV: "資本財", BWA: "資本財", LII: "資本財", CONGL: "資本財",
-  VRT: "資本財", HON: "資本財", WM: "資本財",
+  VRT: "資本財",
   // ── 個別株: エネルギー ──
   XOM: "エネルギー", CVX: "エネルギー", COP: "エネルギー",
   EOG: "エネルギー", SLB: "エネルギー", MPC: "エネルギー",
