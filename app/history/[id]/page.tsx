@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import MobileNav from "@/app/_components/MobileNav";
+import ReportIframe from "@/app/_components/ReportIframe";
 
 interface ReportData {
   id: number;
@@ -11,22 +12,6 @@ interface ReportData {
   total_pct: number;
   total_jpy: number;
   report_html: string;
-}
-
-function ReportIframe({ html }: { html: string }) {
-  const [height, setHeight] = useState(1200);
-  return (
-    <iframe
-      srcDoc={html}
-      sandbox="allow-same-origin allow-scripts"
-      style={{ width: "100%", height, border: "none", display: "block" }}
-      onLoad={(e) => {
-        const body = e.currentTarget.contentDocument?.body;
-        if (body) setHeight(body.scrollHeight + 40);
-      }}
-      title="Historical Report"
-    />
-  );
 }
 
 export default function HistoryDetailPage() {
@@ -73,7 +58,7 @@ export default function HistoryDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-20 sm:pb-0">
+    <div className="min-h-screen bg-slate-100 pb-32 sm:pb-0">
       {/* ── ナビ ── */}
       <div className="hidden sm:block sticky top-0 z-10">
       <nav className="bg-white border-b border-slate-200 shadow-sm">
@@ -128,7 +113,7 @@ export default function HistoryDetailPage() {
         </div>
       )}
 
-      {data && !loading && <ReportIframe html={data.report_html} />}
+      {data && !loading && <ReportIframe html={data.report_html} defaultHeight={1200} />}
       <MobileNav active="/history" />
     </div>
   );

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import MobileNav from "@/app/_components/MobileNav";
+import ReportIframe from "@/app/_components/ReportIframe";
 
 interface ReportSummary {
   id: number;
@@ -91,7 +92,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-20 sm:pb-0">
+    <div className="min-h-screen bg-slate-100 pb-32 sm:pb-0">
       {/* ナビゲーション */}
       <div className="hidden sm:block sticky top-0 z-10">
       <nav className="bg-white border-b border-slate-200 shadow-sm">
@@ -206,26 +207,10 @@ export default function HomePage() {
       {/* レポート表示 */}
       {reportHtml && !loading && (
         <div className="w-full page-enter">
-          <ReportIframe html={reportHtml} />
+          <ReportIframe html={reportHtml} defaultHeight={800} />
         </div>
       )}
       <MobileNav active="/" onGenerate={() => void handleGenerate()} generating={generating} />
     </div>
-  );
-}
-
-function ReportIframe({ html }: { html: string }) {
-  const [height, setHeight] = useState(800);
-  return (
-    <iframe
-      srcDoc={html}
-      sandbox="allow-same-origin allow-scripts"
-      style={{ width: "100%", height, border: "none" }}
-      onLoad={(e) => {
-        const body = e.currentTarget.contentDocument?.body;
-        if (body) setHeight(body.scrollHeight + 20);
-      }}
-      title="StockNote Report"
-    />
   );
 }
