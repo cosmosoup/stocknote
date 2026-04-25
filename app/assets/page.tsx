@@ -343,6 +343,13 @@ export default function AssetsPage() {
 
           {!loading && history.length > 0 && (
             <div className={`space-y-4 ${entered ? "page-enter" : "opacity-0"}`}>
+              <style>{`
+                @keyframes chart-enter {
+                  from { opacity: 0; transform: translateY(10px); }
+                  to   { opacity: 1; transform: translateY(0); }
+                }
+                .chart-anim { animation: chart-enter 0.6s cubic-bezier(0.22,1,0.36,1) both; }
+              `}</style>
 
               {/* ── ① Hero ── */}
               {latest && (
