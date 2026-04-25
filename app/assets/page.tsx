@@ -155,6 +155,25 @@ function gainBg(pct: number): string {
 }
 
 function SectorTreemap({ holdings }: { holdings: PortfolioEval[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.style.opacity = "0";
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.style.animation = "chart-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both";
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.15 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   const sectorMap = new Map<string, PortfolioEval[]>();
   for (const h of holdings) {
     const s = h.sector ?? "その他";
@@ -170,7 +189,7 @@ function SectorTreemap({ holdings }: { holdings: PortfolioEval[] }) {
     .sort((a, b) => b.sw - a.sw);
 
   return (
-    <div className="chart-anim">
+    <div ref={containerRef}>
       <div style={{ display: "flex", gap: 3, height: 280, overflow: "hidden" }}>
         {sectors.map(({ sector, items, sw }) => (
           <div key={sector} style={{ flex: sw, display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
