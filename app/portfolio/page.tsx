@@ -83,9 +83,11 @@ export default function PortfolioPage() {
     } finally { setOtherSaving(false); }
   };
 
-  // テキストエリアはuncontrolledにしてIMEと干渉させない
+  // テキスト入力は全てuncontrolledにしてIME/オートコレクトと干渉させない
   const macroRef = useRef<HTMLTextAreaElement>(null);
   const hypothesisRef = useRef<HTMLTextAreaElement>(null);
+  const tickerRef = useRef<HTMLInputElement>(null);
+  const [isJpTicker, setIsJpTicker] = useState(false);
 
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,7 +111,8 @@ export default function PortfolioPage() {
     try {
       const method = editId ? "PUT" : "POST";
       const hypothesis = hypothesisRef.current?.value ?? "";
-      const body = editId ? { ...form, id: editId, hypothesis } : { ...form, hypothesis };
+      const ticker = (tickerRef.current?.value ?? "").toUpperCase();
+      const body = editId ? { ...form, id: editId, hypothesis, ticker } : { ...form, hypothesis, ticker };
       const res = await fetch("/api/portfolio", {
         method, headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -118,6 +121,7 @@ export default function PortfolioPage() {
       if (!res.ok) throw new Error(data.error ?? "Error");
       setForm(EMPTY_FORM);
       setEditId(null);
+      setIsJpTicker(false);
       await fetchPortfolio();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error");
@@ -126,6 +130,7 @@ export default function PortfolioPage() {
 
   const handleEdit = (item: PortfolioItem) => {
     setEditId(item.id ?? null);
+    setIsJpTicker(isJp(item.ticker));
     setForm({ ticker: item.ticker, shares: item.shares, cost_price: item.cost_price, cost_rate: item.cost_rate, hypothesis: item.hypothesis ?? "" });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -312,21 +317,22 @@ export default function PortfolioPage() {
           )}
           <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[
-                { label: "ティッカー *", type: "text", key: "ticker", placeholder: "VT / 6758" },
-              ].map(() => (
-                <div key="ticker">
-                  <label className="text-slate-400 text-xs block mb-1">ティッカー *</label>
-                  <input
-                    type="text"
-                    value={form.ticker ?? ""}
-                    onChange={(e) => setForm({ ...form, ticker: e.target.value.toUpperCase() })}
-                    placeholder="VT / 6758"
-                    required
-                    className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b]"
-                  />
-                </div>
-              ))}
+              <div>
+                <label className="text-slate-400 text-xs block mb-1">ティッカー *</label>
+                <input
+                  key={editId ?? "new"}
+                  ref={tickerRef}
+                  type="text"
+                  defaultValue={form.ticker ?? ""}
+                  onBlur={(e) => {
+                    e.target.value = e.target.value.toUpperCase();
+                    setIsJpTicker(isJp(e.target.value));
+                  }}
+                  placeholder="VT / 6758"
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b]"
+                />
+              </div>
               <div>
                 <label className="text-slate-400 text-xs block mb-1">口数/株数 *</label>
                 <input
@@ -339,7 +345,7 @@ export default function PortfolioPage() {
               </div>
               <div>
                 <label className="text-slate-400 text-xs block mb-1">
-                  取得単価 ({form.ticker && isJp(form.ticker) ? "JPY" : "USD"}) *
+                  取得単価 ({isJpTicker ? "JPY" : "USD"}) *
                 </label>
                 <input
                   type="number"
@@ -356,7 +362,7 @@ export default function PortfolioPage() {
                   value={form.cost_rate ?? ""}
                   onChange={(e) => setForm({ ...form, cost_rate: e.target.value ? parseFloat(e.target.value) : null })}
                   step="any" placeholder="150.00"
-                  disabled={!!(form.ticker && isJp(form.ticker))}
+                  disabled={isJpTicker}
                   className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b] disabled:opacity-40"
                 />
               </div>
