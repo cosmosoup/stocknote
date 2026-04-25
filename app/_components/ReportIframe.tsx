@@ -50,23 +50,6 @@ function applyTableScroll(doc: Document) {
   });
 }
 
-/** 旧HTMLに埋め込まれたツリーマップをiframe内から非表示にする（React版に統一） */
-function hideOldTreemap(doc: Document) {
-  // data-tm セル（ツリーマップの銘柄セル）が存在する場合のみ処理
-  // #tm-tip は position:fixed のため DOM 親が body になることがある → data-tm 起点を使用
-  const cell = doc.querySelector("[data-tm]");
-  if (!cell) return;
-
-  // data-tm セルから .chart-block を上方向に探してブロックごと非表示
-  let el: Element | null = cell;
-  while (el && el !== doc.body && !el.classList.contains("chart-block")) {
-    el = el.parentElement;
-  }
-  if (el && el !== doc.body) (el as HTMLElement).style.display = "none";
-
-  // フローティングtooltipも削除
-  doc.getElementById("tm-tip")?.remove();
-}
 
 interface Props {
   html: string;
@@ -90,7 +73,6 @@ export default function ReportIframe({
         const doc = e.currentTarget.contentDocument;
         if (!doc) return;
         applyTableScroll(doc);
-        hideOldTreemap(doc);
         setHeight((doc.body?.scrollHeight ?? defaultHeight) + 40);
       }}
       title="StockNote Report"

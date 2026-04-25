@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import MobileNav from "@/app/_components/MobileNav";
 import ReportIframe from "@/app/_components/ReportIframe";
-import { SectorTreemap } from "@/app/_components/SectorTreemap";
-import type { PortfolioEval } from "@/types";
 
 interface ReportSummary {
   id: number;
@@ -29,8 +27,6 @@ export default function HomePage() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [holdings, setHoldings] = useState<PortfolioEval[]>([]);
-  const [holdingsLoaded, setHoldingsLoaded] = useState(false);
   const [step, setStep] = useState(0);
   const [progress, setProgress] = useState(0);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -48,20 +44,7 @@ export default function HomePage() {
     finally { setLoading(false); }
   }, []);
 
-  const fetchHoldings = useCallback(async () => {
-    try {
-      const res = await fetch("/api/holdings");
-      if (!res.ok) return;
-      const data = await res.json() as { holdings: PortfolioEval[] };
-      setHoldings(data.holdings ?? []);
-    } catch { /* ignore */ }
-    finally { setHoldingsLoaded(true); }
-  }, []);
-
-  useEffect(() => {
-    void fetchLatestReport();
-    void fetchHoldings();
-  }, [fetchLatestReport, fetchHoldings]);
+  useEffect(() => { void fetchLatestReport(); }, [fetchLatestReport]);
 
   useEffect(() => {
     if (generating) {
@@ -96,7 +79,6 @@ export default function HomePage() {
       const data = await res.json() as { ok?: boolean; error?: string };
       if (!res.ok || data.error) throw new Error(data.error ?? "Failed");
       await fetchLatestReport();
-      await fetchHoldings();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -226,31 +208,6 @@ export default function HomePage() {
       {reportHtml && !loading && (
         <div className="w-full page-enter">
           <ReportIframe html={reportHtml} defaultHeight={800} />
-        </div>
-      )}
-
-      {/* セクター別ポートフォリオ ツリーマップ（レポートとは独立して常に最新） */}
-      {!loading && (reportHtml || holdings.length > 0) && (
-        <div className="max-w-5xl mx-auto px-4 pb-6">
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="sn-label">セクター別ポートフォリオ</div>
-              <div style={{ fontSize: "0.65rem", color: "#94a3b8" }}>色：含損益（コストベース）</div>
-            </div>
-            {!holdingsLoaded ? (
-              <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div className="sn-pulse" style={{ fontSize: "0.75rem", color: "#94a3b8" }}>読み込み中...</div>
-              </div>
-            ) : holdings.length === 0 ? (
-              <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ fontSize: "0.75rem", color: "#94a3b8", textAlign: "center" }}>
-                  データがありません。「今すぐ生成」を実行してください。
-                </div>
-              </div>
-            ) : (
-              <SectorTreemap holdings={holdings} />
-            )}
-          </div>
         </div>
       )}
 
