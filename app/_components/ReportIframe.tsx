@@ -2,13 +2,6 @@
 
 import { useState } from "react";
 
-// チャート画像フェードインアニメーション（旧レポートにも動的注入）
-// 1.2s delay で iframe レンダリング後にユーザーが見える状態になってから発火
-const CHART_ANIM_CSS = `
-@keyframes chart-enter { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-.chart-img { animation: chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) 1.2s both !important; }
-`;
-
 // テーブル横スクロール用スタイル（旧レポートにも動的注入）
 const TABLE_FIX_CSS = `
 .rpt-tbl-wrap {
@@ -39,15 +32,6 @@ const TABLE_FIX_CSS = `
   border-bottom: 1px solid #f1f5f9;
 }
 `;
-
-function applyChartAnim(doc: Document) {
-  if (!doc.getElementById("__rpt_chart_anim")) {
-    const style = doc.createElement("style");
-    style.id = "__rpt_chart_anim";
-    style.textContent = CHART_ANIM_CSS;
-    (doc.head ?? doc.body).appendChild(style);
-  }
-}
 
 function applyTableScroll(doc: Document) {
   if (!doc.getElementById("__rpt_tbl_fix")) {
@@ -87,7 +71,6 @@ export default function ReportIframe({
       onLoad={(e) => {
         const doc = e.currentTarget.contentDocument;
         if (!doc) return;
-        applyChartAnim(doc);
         applyTableScroll(doc);
         setHeight((doc.body?.scrollHeight ?? defaultHeight) + 40);
       }}

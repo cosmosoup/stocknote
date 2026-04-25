@@ -130,8 +130,8 @@ function buildSectorTreemapHtml(market: MarketData): string {
     ["#dc2626","-10%〜"],["#7f1d1d","-20%〜"],
   ].map(([bg,label]) => `<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:2px;background:${bg};display:inline-block"></span><span style="font-size:0.6rem;color:#64748b">${label}</span></span>`).join("");
 
-  return `<div style="display:flex;gap:4px;height:260px;overflow:hidden">${cols}</div>
-<div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap"><span style="font-size:0.6rem;color:#94a3b8">含損益：</span>${legend}</div>`;
+  return `<div id="sector-treemap" style="opacity:0"><div style="display:flex;gap:4px;height:260px;overflow:hidden">${cols}</div>
+<div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap"><span style="font-size:0.6rem;color:#94a3b8">含損益：</span>${legend}</div></div>`;
 }
 
 /** HTML全体を組み立てる */
@@ -244,7 +244,7 @@ export function buildHtml(
       <div class="chart-label">ポートフォリオ vs S&amp;P 500（${startLabel}〜 累積リターン%）</div>
 
       <div style="font-size:0.68rem;color:#94a3b8;margin-bottom:6px">縦軸：累積リターン（%）　青緑 = ポートフォリオ　灰点線 = S&amp;P500　赤シェード = ドローダウン</div>
-      <img src="${charts.compare}" alt="vs S&P500" class="chart-img">
+      <img src="${charts.compare}" alt="vs S&P500" class="chart-img" onload="this.style.animation='chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) 0.3s both'">
     </div>`;
   }
 
@@ -391,10 +391,7 @@ export function buildHtml(
     margin-bottom: 8px;
   }
   @keyframes chart-enter { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-  .chart-img { width: 100%; border-radius: 10px; display: block; border: 1px solid #f1f5f9; animation: chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) 1.2s both; }
-  .chart-img:nth-child(2) { animation-delay: 1.35s; }
-  .chart-img:nth-child(3) { animation-delay: 1.5s; }
-  .chart-img:nth-child(4) { animation-delay: 1.65s; }
+  .chart-img { width: 100%; border-radius: 10px; display: block; border: 1px solid #f1f5f9; opacity:0; }
 
   /* ── テーブル ── */
   table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
@@ -584,18 +581,18 @@ export function buildHtml(
     <div class="section-title">グラフ</div>
     <div class="chart-block">
       <div class="chart-label">ポートフォリオ構成比</div>
-      <img src="${charts.alloc}" alt="構成比" class="chart-img">
+      <img src="${charts.alloc}" alt="構成比" class="chart-img" onload="this.style.animation='chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) both'">
     </div>
     <div class="chart-block">
       <div class="chart-label">銘柄別 含み損益%</div>
-      <img src="${charts.bar}" alt="銘柄別含損益" class="chart-img">
+      <img src="${charts.bar}" alt="銘柄別含損益" class="chart-img" onload="this.style.animation='chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) 0.15s both'">
     </div>
     ${buildSectorTreemapHtml(market) ? `<div class="chart-block">
       <div class="chart-label">セクター別ポートフォリオ（Finviz風）</div>
       ${buildSectorTreemapHtml(market)}
     </div>` : (charts.sector ? `<div class="chart-block">
       <div class="chart-label">セクター別配分</div>
-      <img src="${charts.sector}" alt="セクター別配分" class="chart-img">
+      <img src="${charts.sector}" alt="セクター別配分" class="chart-img" onload="this.style.animation='chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) 0.3s both'">
     </div>` : "")}
     ${chartCompare}
   </div>
@@ -632,6 +629,20 @@ export function buildHtml(
 </div>
 <script>
 (function(){
+  // セクターツリーマップのアニメーション（IntersectionObserver）
+  var tm = document.getElementById('sector-treemap');
+  if (tm) {
+    var io = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting) {
+          e.target.style.animation = 'chart-enter 0.55s cubic-bezier(0.22,1,0.36,1) both';
+          io.disconnect();
+        }
+      });
+    }, { threshold: 0.1 });
+    io.observe(tm);
+  }
+
   var els = document.querySelectorAll('.cntup');
   var dur = 1200;
   var t0 = performance.now();
