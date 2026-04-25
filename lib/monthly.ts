@@ -26,13 +26,15 @@ export interface MonthlyAggregate {
   days: DailyPoint[];
   start_jpy: number;       // 期間最初の評価額
   end_jpy: number;         // 期間最後の評価額
-  monthly_pct: number;     // (end - start) / start * 100
+  monthly_pct: number;     // (end - start) / start * 100 ← 入出金含む評価額ベース
+  twr_monthly: number;     // 時間加重収益率（daily_pct複利チェーン）← 純投資パフォーマンス
+  cash_flow_jpy: number;   // 推定入出金額（万円）= end_jpy - start_jpy*(1+twr/100)
   end_total_pct: number;   // 月末時点の通算損益%
   max_jpy: number;
   min_jpy: number;
   avg_daily_pct: number;
   volatility: number;      // 日次リターンの標準偏差
-  sp500_monthly: number;   // S&P500日次合計（月次累積の近似）
+  sp500_monthly: number;   // S&P500月次累積（複利チェーン）
   usdjpy_start: number;
   usdjpy_end: number;
   avg_vix: number;
@@ -74,7 +76,13 @@ export async function buildMonthlyAggregate(): Promise<MonthlyAggregate | null> 
   const jpyValues = days.map((d) => d.total_jpy).filter((v) => v > 0);
   const start_jpy = jpyValues[0] ?? 0;
   const end_jpy = jpyValues[jpyValues.length - 1] ?? 0;
+  // 評価額ベース騰落率（入出金・買い増しの影響を含む）
   const monthly_pct = start_jpy > 0 ? ((end_jpy - start_jpy) / start_jpy) * 100 : 0;
+
+  // 時間加重収益率 TWR（日次 daily_pct を複利チェーン → 純粋な価格変動パフォーマンス）
+  const twr_monthly = (days.reduce((mul, d) => mul * (1 + d.daily_pct / 100), 1) - 1) * 100;
+  // 入出金推定：もし入出金ゼロなら end_jpy = start_jpy*(1+twr/100) のはず。差額が入出金分
+  const cash_flow_jpy = start_jpy > 0 ? end_jpy - start_jpy * (1 + twr_monthly / 100) : 0;
 
   const dailyPcts = days.map((d) => d.daily_pct);
   const avg_daily_pct = dailyPcts.reduce((a, b) => a + b, 0) / dailyPcts.length;
@@ -94,6 +102,8 @@ export async function buildMonthlyAggregate(): Promise<MonthlyAggregate | null> 
     start_jpy,
     end_jpy,
     monthly_pct,
+    twr_monthly,
+    cash_flow_jpy,
     end_total_pct: days[days.length - 1].total_pct,
     max_jpy: Math.max(...jpyValues),
     min_jpy: Math.min(...jpyValues),
@@ -120,19 +130,35 @@ function buildMonthlyPrompt(agg: MonthlyAggregate, macroStrategy: string): strin
     ? `\n## 投資戦略・マクロ仮説（オーナー設定）\n${macroStrategy}\n`
     : "";
 
+  const excessReturn = agg.twr_monthly - agg.sp500_monthly;
+  const hasCashFlow = Math.abs(agg.cash_flow_jpy) > 5; // 5万円以上の入出金があれば言及
+
   return `${macroSection}
-## 月次サマリー（${agg.month}）
+## 月次パフォーマンス分解（${agg.month}）
+
+【重要】以下のデータには「純投資パフォーマンス」と「評価額ベース騰落率」の2種類があります。
+分析・エグゼクティブサマリーでは必ず「純投資パフォーマンス（TWR）」を軸にすること。
+
+### ① 純投資パフォーマンス（時間加重収益率 / TWR）※最重要指標
+- TWR月次リターン: ${sign(agg.twr_monthly)}${agg.twr_monthly.toFixed(2)}%
+  ※日次騰落率(daily_pct)を複利チェーンした値。株価の実際の動きのみを反映。入出金・買い増しの影響を除外した「純粋な運用成績」
+- vs S&P500（超過リターン）: ${sign(excessReturn)}${excessReturn.toFixed(2)}%
+  （S&P500月次：${sign(agg.sp500_monthly)}${agg.sp500_monthly.toFixed(2)}%）
+
+### ② 評価額ベース月次騰落率（参考値）
+- 評価額ベース騰落率: ${sign(agg.monthly_pct)}${agg.monthly_pct.toFixed(2)}%
+  ※期間開始評価額→期間終了評価額の単純変化率。入出金・株の買い増しによる変動を含む。パフォーマンス分析には使わないこと。
+${hasCashFlow ? `- 推定入出金額: ${sign(agg.cash_flow_jpy)}${agg.cash_flow_jpy.toFixed(1)}万円（正値=資金追加/買い増し、負値=資金引出/売却）` : "- 推定入出金: ほぼなし（5万円未満）"}
+
+### ③ その他統計
 - 期間: ${agg.days[0].date} 〜 ${agg.days[agg.days.length - 1].date}（${agg.days.length}営業日）
 - 期間開始評価額: ${agg.start_jpy.toFixed(0)}万円
 - 期間終了評価額: ${agg.end_jpy.toFixed(0)}万円
-- 月次騰落率: ${sign(agg.monthly_pct)}${agg.monthly_pct.toFixed(2)}%
 - 期間中最高額: ${agg.max_jpy.toFixed(0)}万円
 - 期間中最低額: ${agg.min_jpy.toFixed(0)}万円
-- 通算損益率（月末）: ${sign(agg.end_total_pct)}${agg.end_total_pct.toFixed(2)}%
+- 通算損益率（月末・コストベース）: ${sign(agg.end_total_pct)}${agg.end_total_pct.toFixed(2)}%
 - 日次リターン平均: ${sign(agg.avg_daily_pct)}${agg.avg_daily_pct.toFixed(3)}%
 - 日次ボラティリティ（標準偏差）: ${agg.volatility.toFixed(3)}%
-- S&P500月次累積（日次合計）: ${sign(agg.sp500_monthly)}${agg.sp500_monthly.toFixed(2)}%
-- vs S&P500 超過リターン: ${sign(agg.monthly_pct - agg.sp500_monthly)}${(agg.monthly_pct - agg.sp500_monthly).toFixed(2)}%
 - USD/JPY: ${agg.usdjpy_start.toFixed(2)} → ${agg.usdjpy_end.toFixed(2)}
 - VIX平均: ${agg.avg_vix.toFixed(2)}
 
@@ -159,6 +185,12 @@ async function generateMonthlyReportMd(
 - ボラティリティ・S&P500との比較・通貨影響（USD/JPY変動が円建て評価額に与えた影響の推定）について掘り下げること
 - 月中の重要局面（最高値・最低値の時期・要因）を分析すること
 - 月次レポートなので、日次より深く・具体的・戦略的に書くこと
+
+【パフォーマンス分析の鉄則（必ず遵守）】
+- パフォーマンス評価は必ず「TWR（時間加重収益率）」を使うこと。「評価額ベース騰落率」は入出金・買い増しの影響を含むため、運用成績の指標として使ってはならない
+- エグゼクティブサマリーには「TWRで月間XX%」を明記し、「評価額はYY万円→ZZ万円」は補足として扱うこと
+- 入出金推定額が5万円以上の場合は、それを明示したうえで「入出金を除いた純粋な投資パフォーマンスはXX%」と読者に伝えること
+- S&P500との比較もTWRベースで行うこと
 
 【出力形式】
 - 最初の出力は必ず ## から始める（タイトル行・日時行を先頭に出さない）
@@ -199,7 +231,7 @@ function buildMonthlyHtml(agg: MonthlyAggregate, reportHtml: string): string {
   const sign = (n: number) => (n >= 0 ? "+" : "");
   const pctColor = (n: number) => (n > 0 ? "#10b981" : n < 0 ? "#f87171" : "#94a3b8");
   const pctColorLight = (n: number) => (n > 0 ? "#008b8b" : n < 0 ? "#dc2626" : "#94a3b8");
-  const excessReturn = agg.monthly_pct - agg.sp500_monthly;
+  const excessReturn = agg.twr_monthly - agg.sp500_monthly;  // TWRベースで比較
 
   // ポートフォリオ vs S&P500 累積チャート
   // - ポートフォリオ: daily_pct を複利チェーン（デイリーグラフと同じ方式）
@@ -333,16 +365,17 @@ function buildMonthlyHtml(agg: MonthlyAggregate, reportHtml: string): string {
         <div class="hero-sub" style="color:#64748b">${agg.days.length}営業日</div>
       </div>
       <div class="hero-item">
-        <div class="hero-label">月次騰落</div>
-        <div class="hero-value" style="color:${pctColor(agg.monthly_pct)}">${sign(agg.monthly_pct)}${agg.monthly_pct.toFixed(2)}%</div>
-        <div class="hero-sub" style="color:#64748b">${agg.start_jpy.toFixed(0)}万 → ${agg.end_jpy.toFixed(0)}万円</div>
+        <div class="hero-label">月次リターン（TWR）</div>
+        <div class="hero-value" style="color:${pctColor(agg.twr_monthly)}">${sign(agg.twr_monthly)}${agg.twr_monthly.toFixed(2)}%</div>
+        <div class="hero-sub" style="color:#64748b">純投資パフォーマンス</div>
       </div>
       <div class="hero-item">
         <div class="hero-label">通算損益（月末）</div>
         <div class="hero-value" style="color:${pctColor(agg.end_total_pct)}">${sign(agg.end_total_pct)}${agg.end_total_pct.toFixed(2)}%</div>
+        <div class="hero-sub" style="color:#64748b">${agg.start_jpy.toFixed(0)}万 → ${agg.end_jpy.toFixed(0)}万円</div>
       </div>
       <div class="hero-item">
-        <div class="hero-label">vs S&amp;P500</div>
+        <div class="hero-label">vs S&amp;P500（TWRベース）</div>
         <div class="hero-value" style="color:${pctColor(excessReturn)}">${sign(excessReturn)}${excessReturn.toFixed(2)}%</div>
         <div class="hero-sub" style="color:#64748b">超過リターン</div>
       </div>

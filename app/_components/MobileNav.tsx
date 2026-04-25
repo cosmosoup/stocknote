@@ -68,9 +68,9 @@ export default function MobileNav({ active, onGenerate, generating }: Props) {
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-white border-t border-slate-200"
-      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)" }}
     >
-      <div className="grid grid-cols-5 h-[68px]">
+      <div className="grid grid-cols-5 h-[76px]">
         {/* ホーム・一覧・資産・管理 */}
         {NAV_ITEMS.map(({ href, label, Icon }) => (
           <a

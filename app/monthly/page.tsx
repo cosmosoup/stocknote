@@ -77,7 +77,7 @@ export default function MonthlyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-20 sm:pb-0">
+    <div className="min-h-screen bg-slate-100 pb-32 sm:pb-0">
       {/* ── ナビ ── */}
       <div className="hidden sm:block sticky top-0 z-10">
       <nav className="bg-white border-b border-slate-200 shadow-sm">
