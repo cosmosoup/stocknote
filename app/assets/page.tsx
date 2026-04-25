@@ -248,6 +248,7 @@ export default function AssetsPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [soloKey, setSoloKey] = useState<string | null>(null);
   const [holdings, setHoldings] = useState<PortfolioEval[]>([]);
+  const [holdingsLoaded, setHoldingsLoaded] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 639px)");
@@ -273,8 +274,11 @@ export default function AssetsPage() {
   useEffect(() => {
     fetch("/api/holdings")
       .then(r => r.json())
-      .then((d: { holdings: PortfolioEval[] }) => setHoldings(d.holdings ?? []))
-      .catch(() => {});
+      .then((d: { holdings: PortfolioEval[] }) => {
+        setHoldings(d.holdings ?? []);
+        setHoldingsLoaded(true);
+      })
+      .catch(() => setHoldingsLoaded(true));
   }, []);
 
   const latest  = history[history.length - 1];
@@ -458,7 +462,7 @@ export default function AssetsPage() {
                       </div>
 
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={stackedUrl} alt="総資産推移" className="w-full rounded block chart-anim" loading="lazy" />
+                      <img src={stackedUrl} alt="総資産推移" className={`w-full rounded block${entered ? " chart-anim" : ""}`} loading="lazy" />
                     </div>
                   )}
                   {/* 右: ① 資産配分ドーナツ */}
@@ -466,22 +470,32 @@ export default function AssetsPage() {
                     <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
                       <div className="sn-label mb-3">資産配分</div>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={donutUrl} alt="資産配分" className="w-full rounded block chart-anim" loading="lazy" />
+                      <img src={donutUrl} alt="資産配分" className={`w-full rounded block${entered ? " chart-anim" : ""}`} loading="lazy" />
                     </div>
                   )}
                 </div>
               )}
 
               {/* セクター別ポートフォリオ ツリーマップ */}
-              {holdings.length > 0 && (
-                <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="sn-label">セクター別ポートフォリオ</div>
-                    <div style={{ fontSize: "0.65rem", color: "#94a3b8" }}>色：含損益（コストベース）</div>
-                  </div>
-                  <SectorTreemap holdings={holdings} />
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="sn-label">セクター別ポートフォリオ</div>
+                  <div style={{ fontSize: "0.65rem", color: "#94a3b8" }}>色：含損益（コストベース）</div>
                 </div>
-              )}
+                {!holdingsLoaded ? (
+                  <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div className="sn-pulse" style={{ fontSize: "0.75rem", color: "#94a3b8" }}>読み込み中...</div>
+                  </div>
+                ) : holdings.length === 0 ? (
+                  <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ fontSize: "0.75rem", color: "#94a3b8", textAlign: "center" }}>
+                      データがありません。<br />トップページから「今すぐ生成」を実行してください。
+                    </div>
+                  </div>
+                ) : (
+                  <SectorTreemap holdings={holdings} />
+                )}
+              </div>
 
               {/* 履歴テーブル */}
               {history.length > 0 && (
