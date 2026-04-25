@@ -170,7 +170,7 @@ function SectorTreemap({ holdings }: { holdings: PortfolioEval[] }) {
     .sort((a, b) => b.sw - a.sw);
 
   return (
-    <div>
+    <div className="chart-anim">
       <div style={{ display: "flex", gap: 3, height: 280, overflow: "hidden" }}>
         {sectors.map(({ sector, items, sw }) => (
           <div key={sector} style={{ flex: sw, display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
