@@ -15,6 +15,7 @@ export default function PortfolioPage() {
   const [macroStrategy, setMacroStrategy] = useState("");
   const [macroSaving, setMacroSaving] = useState(false);
   const [macroSaved, setMacroSaved] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   const [cashJpy, setCashJpy] = useState<number>(0);
   const [cashSaving, setCashSaving] = useState(false);
@@ -35,8 +36,9 @@ export default function PortfolioPage() {
         setTrustJpy(d.trust_jpy ?? 0);
         setBtcAmount(d.btc_amount ?? 0);
         setFreeCashJpy(d.free_cash_jpy ?? 0);
+        setSettingsLoaded(true);
       })
-      .catch(() => {});
+      .catch(() => { setSettingsLoaded(true); });
   }, []);
 
   const handleMacroSave = async () => {
@@ -81,16 +83,9 @@ export default function PortfolioPage() {
     } finally { setOtherSaving(false); }
   };
 
-  // テキストエリア・テキスト入力はuncontrolledにしてIMEと干渉させない
+  // テキストエリアはuncontrolledにしてIMEと干渉させない
   const macroRef = useRef<HTMLTextAreaElement>(null);
   const hypothesisRef = useRef<HTMLTextAreaElement>(null);
-
-  // APIロード後にテキストエリアへ反映（userが入力中でなければ）
-  useEffect(() => {
-    if (macroRef.current && document.activeElement !== macroRef.current) {
-      macroRef.current.value = macroStrategy;
-    }
-  }, [macroStrategy]);
 
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,13 +123,6 @@ export default function PortfolioPage() {
       setError(err instanceof Error ? err.message : "Error");
     } finally { setSaving(false); }
   };
-
-  // 編集・リセット時にhypothesisテキストエリアへ反映
-  useEffect(() => {
-    if (hypothesisRef.current && document.activeElement !== hypothesisRef.current) {
-      hypothesisRef.current.value = form.hypothesis ?? "";
-    }
-  }, [form.hypothesis]);
 
   const handleEdit = (item: PortfolioItem) => {
     setEditId(item.id ?? null);
@@ -192,13 +180,17 @@ export default function PortfolioPage() {
               {macroSaving ? "保存中…" : macroSaved ? "✓ 保存済" : "保存"}
             </button>
           </div>
-          <textarea
-            ref={macroRef}
-            defaultValue={macroStrategy}
-            rows={6}
-            placeholder={`例：\n【投資スタンス】\n1. Global Macro: 米国株(S&P500)は割高アンダーウェイト。割安な新興国（インド・南米）をオーバーウェイト。\n2. 日本株: 円キャリートレード巻き戻しリスクを警戒。ポジション最小限。`}
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b] resize-y placeholder:text-slate-400 leading-relaxed"
-          />
+          {settingsLoaded ? (
+            <textarea
+              ref={macroRef}
+              defaultValue={macroStrategy}
+              rows={6}
+              placeholder={`例：\n【投資スタンス】\n1. Global Macro: 米国株(S&P500)は割高アンダーウェイト。割安な新興国（インド・南米）をオーバーウェイト。\n2. 日本株: 円キャリートレード巻き戻しリスクを警戒。ポジション最小限。`}
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 text-sm focus:outline-none focus:border-[#008b8b] resize-y placeholder:text-slate-400 leading-relaxed"
+            />
+          ) : (
+            <div className="w-full h-36 bg-slate-50 border border-slate-200 rounded-lg animate-pulse" />
+          )}
         </div>
 
         {/* キャッシュ残高 */}
@@ -375,6 +367,7 @@ export default function PortfolioPage() {
                 <span className="ml-2 text-slate-300">（この銘柄に期待している理由など）</span>
               </label>
               <textarea
+                key={editId ?? "new"}
                 ref={hypothesisRef}
                 defaultValue={form.hypothesis ?? ""}
                 placeholder="例: グローバル分散コアETF、AI半導体の構造的成長..."
