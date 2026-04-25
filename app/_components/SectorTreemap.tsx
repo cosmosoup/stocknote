@@ -44,11 +44,9 @@ export function SectorTreemap({ holdings }: { holdings: PortfolioEval[] }) {
     }))
     .sort((a, b) => b.sw - a.sw);
 
-  // 最小セクターが MIN_ROW_H px 以上になるようコンテナ高さを動的計算
-  // 小さいセクターを潰さず、大きいセクターが比例して広くなる
-  const MIN_ROW_H = 28;
+  // 最小セクターが28px以上になるよう高さを動的計算
   const minSw = sectors.length > 0 ? Math.min(...sectors.map(s => s.sw)) : 10;
-  const containerH = Math.min(800, Math.max(280, Math.ceil(MIN_ROW_H / (minSw / 100))));
+  const containerH = Math.min(800, Math.max(280, Math.ceil(28 / (minSw / 100))));
 
   const winW = typeof window !== "undefined" ? window.innerWidth : 800;
 
@@ -80,12 +78,11 @@ export function SectorTreemap({ holdings }: { holdings: PortfolioEval[] }) {
         </div>
       )}
 
-      {/* 縦軸=セクター面積(flex:sw + min-height)、左列=ラベル固定幅、右=銘柄幅(flex:weight + min-width) */}
-      {/* min-height/min-width で最小視認サイズを確保しつつ、大きいものを比例スケール */}
+      {/* 縦積み: セクターが行、銘柄が横に並ぶ。行高さ∝セクター比率、セル幅∝銘柄比率 */}
       <div style={{ display: "flex", flexDirection: "column", gap: 2, height: containerH }}>
         {sectors.map(({ sector, items, sw }) => (
           <div key={sector} style={{ flex: sw, display: "flex", gap: 2 }}>
-            {/* セクターラベル列（固定幅・常時表示） */}
+            {/* セクターラベル列 */}
             <div style={{
               width: 68, flexShrink: 0, display: "flex", alignItems: "center",
               padding: "3px 5px", background: "#f8fafc", borderRadius: 4,
@@ -99,7 +96,7 @@ export function SectorTreemap({ holdings }: { holdings: PortfolioEval[] }) {
                 {sector}
               </div>
             </div>
-            {/* 銘柄エリア（1行ラベル：VOO 24.5%（+2.5%）） */}
+            {/* 銘柄セル（1行ラベル: VOO 24.5%（+2.5%）） */}
             <div style={{ flex: 1, display: "flex", gap: 2, minWidth: 0 }}>
               {items.map(h => {
                 const gainStr = (h.gain_pct >= 0 ? "+" : "") + h.gain_pct.toFixed(1) + "%";
