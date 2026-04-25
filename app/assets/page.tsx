@@ -168,7 +168,7 @@ function SectorTreemap({ holdings }: { holdings: PortfolioEval[] }) {
           obs.disconnect();
         }
       },
-      { threshold: 0.15 }
+      { threshold: 0.4 }
     );
     obs.observe(el);
     return () => obs.disconnect();
@@ -469,7 +469,8 @@ export default function AssetsPage() {
                       </div>
 
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={stackedUrl} alt="総資産推移" className={`w-full rounded block${entered ? " chart-anim" : ""}`} loading="lazy" />
+                      <img src={stackedUrl} alt="総資産推移" className="w-full rounded block" style={{ opacity: 0 }}
+                        onLoad={e => { e.currentTarget.style.animation = "chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) both"; }} loading="lazy" />
                     </div>
                   )}
                   {/* 右: ① 資産配分ドーナツ */}
@@ -477,7 +478,8 @@ export default function AssetsPage() {
                     <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
                       <div className="sn-label mb-3">資産配分</div>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={donutUrl} alt="資産配分" className={`w-full rounded block${entered ? " chart-anim" : ""}`} loading="lazy" />
+                      <img src={donutUrl} alt="資産配分" className="w-full rounded block" style={{ opacity: 0 }}
+                        onLoad={e => { e.currentTarget.style.animation = "chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) 0.12s both"; }} loading="lazy" />
                     </div>
                   )}
                 </div>

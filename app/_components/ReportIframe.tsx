@@ -3,9 +3,21 @@
 import { useState } from "react";
 
 // チャート画像フェードインアニメーション（旧レポートにも動的注入）
-const CHART_ANIM_CSS = `
-@keyframes chart-enter { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-.chart-img { animation: chart-enter 0.55s cubic-bezier(0.22,1,0.36,1) both !important; }
+// 画像ロード完了時に発火させることでタイミングを合わせる
+const CHART_ANIM_KEYFRAMES = `
+@keyframes chart-enter { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+`;
+const CHART_ANIM_SCRIPT = `
+(function(){
+  var imgs = document.querySelectorAll('.chart-img');
+  imgs.forEach(function(img,i){
+    img.style.opacity='0';
+    var delay=(i*0.12)+'s';
+    function go(){ img.style.animation='chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) '+delay+' both'; }
+    if(img.complete&&img.naturalHeight>0){ go(); }
+    else { img.addEventListener('load',go); }
+  });
+})();
 `;
 
 // テーブル横スクロール用スタイル（旧レポートにも動的注入）
@@ -43,8 +55,14 @@ function applyChartAnim(doc: Document) {
   if (!doc.getElementById("__rpt_chart_anim")) {
     const style = doc.createElement("style");
     style.id = "__rpt_chart_anim";
-    style.textContent = CHART_ANIM_CSS;
+    style.textContent = CHART_ANIM_KEYFRAMES;
     (doc.head ?? doc.body).appendChild(style);
+  }
+  if (!doc.getElementById("__rpt_chart_script")) {
+    const script = doc.createElement("script");
+    script.id = "__rpt_chart_script";
+    script.textContent = CHART_ANIM_SCRIPT;
+    doc.body.appendChild(script);
   }
 }
 

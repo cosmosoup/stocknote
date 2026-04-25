@@ -77,6 +77,63 @@ function buildFearGreedMeter(score: number): string {
   </svg>`;
 }
 
+function gainBg(pct: number): string {
+  if (pct >= 20) return "#065f46";
+  if (pct >= 10) return "#047857";
+  if (pct >= 5)  return "#059669";
+  if (pct >= 2)  return "#10b981";
+  if (pct >= 0)  return "#34d399";
+  if (pct >= -2) return "#f87171";
+  if (pct >= -5) return "#ef4444";
+  if (pct >= -10) return "#dc2626";
+  if (pct >= -20) return "#b91c1c";
+  return "#7f1d1d";
+}
+
+function buildSectorTreemapHtml(market: MarketData): string {
+  const portfolio = market.portfolio;
+  if (!portfolio || portfolio.length === 0) return "";
+  const sectorMap = new Map<string, typeof portfolio>();
+  for (const h of portfolio) {
+    const s = h.sector ?? "その他";
+    if (!sectorMap.has(s)) sectorMap.set(s, []);
+    sectorMap.get(s)!.push(h);
+  }
+  const sectors = Array.from(sectorMap.entries())
+    .map(([sector, items]) => ({
+      sector,
+      items: [...items].sort((a, b) => b.weight - a.weight),
+      sw: items.reduce((s, h) => s + h.weight, 0),
+    }))
+    .sort((a, b) => b.sw - a.sw);
+  if (sectors.length === 0) return "";
+
+  const cols = sectors.map(({ sector, items, sw }) => {
+    const divs = items.map(h => {
+      const gain = (h.gain_pct >= 0 ? "+" : "") + h.gain_pct.toFixed(1) + "%";
+      const showW = h.weight >= 2.5, showG = h.weight >= 5;
+      return `<div style="flex:${h.weight};background:${gainBg(h.gain_pct)};border-radius:4px;padding:3px 5px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;min-height:20px" title="${escHtml(h.ticker)} ${h.weight.toFixed(1)}% ${gain}">
+  <div style="font-weight:700;font-size:0.72rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(h.ticker)}</div>
+  ${showW ? `<div style="font-size:0.6rem;color:rgba(255,255,255,0.82)">${h.weight.toFixed(1)}%</div>` : ""}
+  ${showG ? `<div style="font-size:0.6rem;color:rgba(255,255,255,0.92);font-weight:600">${gain}</div>` : ""}
+</div>`;
+    }).join("");
+    return `<div style="flex:${sw};display:flex;flex-direction:column;gap:2px;min-width:0">
+  <div style="font-size:0.58rem;font-weight:700;color:#64748b;letter-spacing:0.06em;text-transform:uppercase;padding:0 2px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(sector)}</div>
+  <div style="display:flex;flex-direction:column;gap:2px;flex:1">${divs}</div>
+</div>`;
+  }).join("");
+
+  const legend = [
+    ["#065f46","+20%〜"],["#047857","+10%〜"],["#059669","+5%〜"],
+    ["#10b981","+2%〜"],["#34d399","0〜+2%"],["#f87171","0〜-2%"],
+    ["#dc2626","-10%〜"],["#7f1d1d","-20%〜"],
+  ].map(([bg,label]) => `<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:2px;background:${bg};display:inline-block"></span><span style="font-size:0.6rem;color:#64748b">${label}</span></span>`).join("");
+
+  return `<div style="display:flex;gap:4px;height:260px;overflow:hidden">${cols}</div>
+<div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap"><span style="font-size:0.6rem;color:#94a3b8">含損益：</span>${legend}</div>`;
+}
+
 /** HTML全体を組み立てる */
 export function buildHtml(
   market: MarketData,
@@ -333,8 +390,8 @@ export function buildHtml(
     color: #94a3b8;
     margin-bottom: 8px;
   }
-  @keyframes chart-enter { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-  .chart-img { width: 100%; border-radius: 10px; display: block; border: 1px solid #f1f5f9; animation: chart-enter 0.55s cubic-bezier(0.22,1,0.36,1) both; }
+  @keyframes chart-enter { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  .chart-img { width: 100%; border-radius: 10px; display: block; border: 1px solid #f1f5f9; opacity:0; }
 
   /* ── テーブル ── */
   table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
@@ -530,10 +587,13 @@ export function buildHtml(
       <div class="chart-label">銘柄別 含み損益%</div>
       <img src="${charts.bar}" alt="銘柄別含損益" class="chart-img">
     </div>
-    ${charts.sector ? `<div class="chart-block">
+    ${buildSectorTreemapHtml(market) ? `<div class="chart-block">
+      <div class="chart-label">セクター別ポートフォリオ（Finviz風）</div>
+      ${buildSectorTreemapHtml(market)}
+    </div>` : (charts.sector ? `<div class="chart-block">
       <div class="chart-label">セクター別配分</div>
       <img src="${charts.sector}" alt="セクター別配分" class="chart-img">
-    </div>` : ""}
+    </div>` : "")}
     ${chartCompare}
   </div>
 
@@ -592,6 +652,20 @@ export function buildHtml(
     if (t < 1) requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
+})();
+</script>
+<script>
+/* グラフ画像アニメーション：画像ロード完了時に発火（タイミングを合わせるため） */
+(function(){
+  var imgs = document.querySelectorAll('.chart-img');
+  imgs.forEach(function(img, i){
+    var delay = (i * 0.12) + 's';
+    function go(){
+      img.style.animation = 'chart-enter 0.7s cubic-bezier(0.22,1,0.36,1) ' + delay + ' both';
+    }
+    if(img.complete && img.naturalHeight > 0){ go(); }
+    else { img.addEventListener('load', go); }
+  });
 })();
 </script>
 </body>
