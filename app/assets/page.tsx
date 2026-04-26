@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import type { AssetSnapshot, PortfolioEval } from "@/types";
+import type { AssetSnapshot } from "@/types";
 import MobileNav from "@/app/_components/MobileNav";
-import { SectorTreemap } from "@/app/_components/SectorTreemap";
 
 const QUICKCHART = "https://quickchart.io/chart";
 
@@ -149,9 +148,6 @@ export default function AssetsPage() {
   const [period, setPeriod] = useState<Period>("all");
   const [isMobile, setIsMobile] = useState(false);
   const [soloKey, setSoloKey] = useState<string | null>(null);
-  const [holdings, setHoldings] = useState<PortfolioEval[]>([]);
-  const [holdingsLoaded, setHoldingsLoaded] = useState(false);
-
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 639px)");
     setIsMobile(mq.matches);
@@ -173,15 +169,6 @@ export default function AssetsPage() {
       });
   }, []);
 
-  useEffect(() => {
-    fetch("/api/holdings")
-      .then(r => r.json())
-      .then((d: { holdings: PortfolioEval[] }) => {
-        setHoldings(d.holdings ?? []);
-        setHoldingsLoaded(true);
-      })
-      .catch(() => setHoldingsLoaded(true));
-  }, []);
 
   const latest  = history[history.length - 1];
   const prev    = history[history.length - 2];
@@ -377,27 +364,6 @@ export default function AssetsPage() {
                   )}
                 </div>
               )}
-
-              {/* セクター別ポートフォリオ ツリーマップ */}
-              <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="sn-label">セクター別ポートフォリオ</div>
-                  <div style={{ fontSize: "0.65rem", color: "#94a3b8" }}>色：含損益（コストベース）</div>
-                </div>
-                {!holdingsLoaded ? (
-                  <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <div className="sn-pulse" style={{ fontSize: "0.75rem", color: "#94a3b8" }}>読み込み中...</div>
-                  </div>
-                ) : holdings.length === 0 ? (
-                  <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ fontSize: "0.75rem", color: "#94a3b8", textAlign: "center" }}>
-                      データがありません。<br />トップページから「今すぐ生成」を実行してください。
-                    </div>
-                  </div>
-                ) : (
-                  <SectorTreemap holdings={holdings} />
-                )}
-              </div>
 
               {/* 履歴テーブル */}
               {history.length > 0 && (
