@@ -77,13 +77,14 @@ export async function getHistoryData(limit = 30): Promise<HistoryPoint[]> {
     daily_pct: number;
     total_pct: number;
     total_jpy: number;
-    market_data: { sp500_chg?: number } | null;
+    market_data: { sp500_chg?: number; usdjpy?: number } | null;
   }[])].reverse()).map((r) => ({
     date: r.created_at.slice(0, 10),
     daily_pct: r.daily_pct ?? 0,
     total_pct: r.total_pct,
     total_jpy: r.total_jpy,
     sp500_chg: r.market_data?.sp500_chg ?? 0,
+    usdjpy: r.market_data?.usdjpy,
   }));
 }
 

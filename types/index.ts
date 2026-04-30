@@ -87,8 +87,9 @@ export interface HistoryPoint {
   date: string;
   total_pct: number;
   total_jpy: number;
-  daily_pct: number;    // 日次損益%
-  sp500_chg: number;    // S&P500日次%（market_dataから取得）
+  daily_pct: number;    // 日次損益%（現地通貨建て）
+  sp500_chg: number;    // S&P500日次%（USD、market_dataから取得）
+  usdjpy?: number;      // USD/JPYレート（市場データから取得）
 }
 
 // その他資産設定（手動入力）

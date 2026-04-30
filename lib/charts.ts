@@ -118,10 +118,11 @@ function buildBar(portfolio: PortfolioEval[]): string {
   return toUrl(config, 700, height);
 }
 
-/** ポートフォリオ vs S&P500 累積リターン + ドローダウン
- *  - ポートフォリオ: daily_pct（日次%）を複利チェーン → 市場価値ベースの正しいTWR
- *  - S&P500: sp500_chg を複利チェーン → 同じ方式で対等な比較
- *  両線とも「ログ開始日=0%」スタートで、同じ分母方式（現在価値ベース）を使う
+/** ポートフォリオ vs S&P500 累積リターン + ドローダウン（円建て比較）
+ *  - ポートフォリオ: 前日の total_jpy との比率 → 為替込みの真の円建てTWR
+ *    （初日のみ daily_pct をフォールバックとして使用）
+ *  - S&P500: sp500_chg（USD）× USD/JPY変動 → 円建てに換算して対等比較
+ *  両線とも「ログ開始日=0%」スタートで、円ベースの投資家視点のリターンを表示
  */
 function buildCompare(history: HistoryPoint[]): { url: string; portPct: number; sp500Pct: number } {
   // 土日は市場が休場 → Yahoo Financeが前営業日と同じデータを返すため複利チェーンで二重カウントになる
@@ -140,11 +141,28 @@ function buildCompare(history: HistoryPoint[]): { url: string; portPct: number; 
   const drawdownData: number[] = [];
   const labels: string[] = [];
 
-  for (const h of tradingDays) {
-    // ポートフォリオ: daily_pct（当日の価格変動ベース日次リターン）を複利チェーン
-    portMul *= 1 + (h.daily_pct ?? 0) / 100;
-    // S&P500: 日次リターンを複利チェーン（同じ方式）
-    sp500Mul *= 1 + (h.sp500_chg ?? 0) / 100;
+  for (let i = 0; i < tradingDays.length; i++) {
+    const h = tradingDays[i];
+    const prev = i > 0 ? tradingDays[i - 1] : null;
+
+    // ポートフォリオ（円建て）: 前日の total_jpy との比率でリターン計算
+    // → 株価変動＋為替変動を自動的に含んだ真の円建てリターン
+    let portReturn: number;
+    if (prev && prev.total_jpy > 0 && h.total_jpy > 0) {
+      portReturn = (h.total_jpy / prev.total_jpy - 1) * 100;
+    } else {
+      portReturn = h.daily_pct ?? 0; // 初日のみフォールバック（前日データなし）
+    }
+
+    // S&P500（円建て）: USD建てリターン × USD/JPY変動 → 円換算リターン
+    // 例: S&P500 +1%、円安+0.5% → 円建てリターン = (1.01 × 1.005) - 1 ≈ +1.51%
+    const usdjpyChg = (prev?.usdjpy && h.usdjpy && prev.usdjpy > 0)
+      ? (h.usdjpy / prev.usdjpy - 1) * 100
+      : 0;
+    const sp500Return = ((1 + (h.sp500_chg ?? 0) / 100) * (1 + usdjpyChg / 100) - 1) * 100;
+
+    portMul *= 1 + portReturn / 100;
+    sp500Mul *= 1 + sp500Return / 100;
     // ドローダウン: ポートフォリオのピークからの下落幅
     if (portMul > peakPort) peakPort = portMul;
 
@@ -171,7 +189,7 @@ function buildCompare(history: HistoryPoint[]): { url: string; portPct: number; 
           yAxisID: "y",
         },
         {
-          label: "S&P 500",
+          label: "S&P500（円換算）",
           data: sp500Data,
           borderColor: "#94a3b8",
           backgroundColor: "transparent",
