@@ -243,9 +243,9 @@ export function buildHtml(
     const startLabel = cs.startDate.slice(5).replace("-", "/");
 
     chartCompare = `<div class="chart-block">
-      <div class="chart-label">ポートフォリオ vs S&amp;P 500（${startLabel}〜 円建て累積リターン%）</div>
+      <div class="chart-label">ポートフォリオ vs S&amp;P 500（${startLabel}〜 累積リターン%）</div>
 
-      <div style="font-size:0.68rem;color:#94a3b8;margin-bottom:6px">縦軸：累積リターン（%・円建て）　青緑 = ポートフォリオ　灰点線 = S&amp;P500（円換算）　赤シェード = ドローダウン</div>
+      <div style="font-size:0.68rem;color:#94a3b8;margin-bottom:6px">縦軸：累積リターン（%）　青緑 = ポートフォリオ　灰点線 = S&amp;P500　赤シェード = ドローダウン</div>
       <img src="${charts.compare}" alt="vs S&P500" class="chart-img">
     </div>`;
   }

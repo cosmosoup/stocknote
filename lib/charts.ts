@@ -118,11 +118,10 @@ function buildBar(portfolio: PortfolioEval[]): string {
   return toUrl(config, 700, height);
 }
 
-/** ポートフォリオ vs S&P500 累積リターン + ドローダウン（円建て比較）
- *  - ポートフォリオ: 前日の total_jpy との比率 → 為替込みの真の円建てTWR
- *    （初日のみ daily_pct をフォールバックとして使用）
- *  - S&P500: sp500_chg（USD）× USD/JPY変動 → 円建てに換算して対等比較
- *  両線とも「ログ開始日=0%」スタートで、円ベースの投資家視点のリターンを表示
+/** ポートフォリオ vs S&P500 累積リターン + ドローダウン
+ *  - ポートフォリオ: daily_pct（銘柄ごとの前日比%を加重平均した日次リターン）を複利チェーン
+ *  - S&P500: sp500_chg を複利チェーン（同じローカル通貨ベースで対等比較）
+ *  ★ 同日に複数レコードがある場合は最新を使用（二重カウント防止）
  */
 function buildCompare(history: HistoryPoint[]): { url: string; portPct: number; sp500Pct: number } {
   // 土日は市場が休場 → Yahoo Financeが前営業日と同じデータを返すため複利チェーンで二重カウントになる
@@ -133,6 +132,14 @@ function buildCompare(history: HistoryPoint[]): { url: string; portPct: number; 
   });
   if (tradingDays.length < 2) return { url: "", portPct: 0, sp500Pct: 0 };
 
+  // ★ 同日の重複レコードを排除: 同じ日付の場合、最後のレコード（最新生成）を使用
+  // report_date（JST）のupsert制約があっても、created_at（UTC）ベースの日付では重複が生じうる
+  const uniqueByDate = new Map<string, HistoryPoint>();
+  for (const h of tradingDays) {
+    uniqueByDate.set(h.date, h); // 同日の場合は後から来た（より新しい）レコードで上書き
+  }
+  const uniqueDays = [...uniqueByDate.values()]; // Mapは挿入順を保持 → 時系列順を維持
+
   let portMul = 1;
   let sp500Mul = 1;
   let peakPort = 1;
@@ -141,28 +148,11 @@ function buildCompare(history: HistoryPoint[]): { url: string; portPct: number; 
   const drawdownData: number[] = [];
   const labels: string[] = [];
 
-  for (let i = 0; i < tradingDays.length; i++) {
-    const h = tradingDays[i];
-    const prev = i > 0 ? tradingDays[i - 1] : null;
-
-    // ポートフォリオ（円建て）: 前日の total_jpy との比率でリターン計算
-    // → 株価変動＋為替変動を自動的に含んだ真の円建てリターン
-    let portReturn: number;
-    if (prev && prev.total_jpy > 0 && h.total_jpy > 0) {
-      portReturn = (h.total_jpy / prev.total_jpy - 1) * 100;
-    } else {
-      portReturn = h.daily_pct ?? 0; // 初日のみフォールバック（前日データなし）
-    }
-
-    // S&P500（円建て）: USD建てリターン × USD/JPY変動 → 円換算リターン
-    // 例: S&P500 +1%、円安+0.5% → 円建てリターン = (1.01 × 1.005) - 1 ≈ +1.51%
-    const usdjpyChg = (prev?.usdjpy && h.usdjpy && prev.usdjpy > 0)
-      ? (h.usdjpy / prev.usdjpy - 1) * 100
-      : 0;
-    const sp500Return = ((1 + (h.sp500_chg ?? 0) / 100) * (1 + usdjpyChg / 100) - 1) * 100;
-
-    portMul *= 1 + portReturn / 100;
-    sp500Mul *= 1 + sp500Return / 100;
+  for (const h of uniqueDays) {
+    // ポートフォリオ: 各銘柄の前日比%を現在価値で加重した日次リターンを複利チェーン
+    portMul *= 1 + (h.daily_pct ?? 0) / 100;
+    // S&P500: 前日比%を複利チェーン（同じローカル通貨ベース）
+    sp500Mul *= 1 + (h.sp500_chg ?? 0) / 100;
     // ドローダウン: ポートフォリオのピークからの下落幅
     if (portMul > peakPort) peakPort = portMul;
 
@@ -189,7 +179,7 @@ function buildCompare(history: HistoryPoint[]): { url: string; portPct: number; 
           yAxisID: "y",
         },
         {
-          label: "S&P500（円換算）",
+          label: "S&P 500",
           data: sp500Data,
           borderColor: "#94a3b8",
           backgroundColor: "transparent",
@@ -296,11 +286,15 @@ export function buildCharts(
         const day = new Date(h.date + "T12:00:00Z").getUTCDay();
         return day !== 0 && day !== 6;
       });
+      // 重複排除（buildCompare と同じロジック）
+      const uniqueMap = new Map<string, HistoryPoint>();
+      for (const h of td) { uniqueMap.set(h.date, h); }
+      const uniqueDays = [...uniqueMap.values()];
       return {
         portPct: compareResult.portPct,
         sp500Pct: compareResult.sp500Pct,
-        startDate: td[0]?.date ?? history[0].date,
-        days: td.length,
+        startDate: uniqueDays[0]?.date ?? history[0].date,
+        days: uniqueDays.length,
       };
     })() : undefined,
   };
