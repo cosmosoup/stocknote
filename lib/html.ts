@@ -158,7 +158,7 @@ export function buildHtml(
 
   // ── マーケット指標（8個グリッド） ──
   const marketItems = [
-    { label: "S&P 500",       value: fmt(market.sp500, 0),      chg: market.sp500_chg,  sub: null,    color: null },
+    { label: "S&P 500",       value: fmt(market.sp500, 0),      chg: market.sp500_chg,  sub: market.sp500_data_date ? `${market.sp500_data_date}（米国時間）` : null, color: null },
     { label: "NASDAQ",         value: fmt(market.nasdaq, 0),     chg: market.nasdaq_chg, sub: null,    color: null },
     { label: "Gold (USD/oz)",  value: fmt(market.gold, 0),       chg: market.gold_chg,   sub: null,    color: null },
     { label: "WTI Oil",        value: fmt(market.oil, 2),        chg: market.oil_chg,    sub: null,    color: null },
@@ -595,6 +595,9 @@ export function buildHtml(
     <div class="section-title">マーケット概況</div>
     <div class="mkt-grid">${marketHtml}</div>
     ${forexHtml}
+    <div style="margin-top:10px;font-size:0.68rem;color:#94a3b8;line-height:1.5">
+      ※ 米国指数・個別株の前日比は<strong>前米国営業日の終値</strong>ベースです（レポート生成時点 16:00 JST では米国市場が未開場のため）
+    </div>
   </div>
 
   <!-- グラフ -->

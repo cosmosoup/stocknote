@@ -4,6 +4,7 @@ import type { PortfolioItem, PortfolioEval, MarketData } from "@/types";
 interface YahooMeta {
   regularMarketPrice: number;
   chartPreviousClose: number;
+  regularMarketTime?: number; // Unix timestamp（米国時間での最終取引日判定に使用）
   currency?: string;
 }
 interface YahooResponse {
@@ -28,7 +29,7 @@ interface YahooV7Response {
 /** Yahoo Finance v8 APIで1銘柄の価格・前日比を取得 */
 async function fetchYahooQuote(
   symbol: string
-): Promise<{ price: number; change_pct: number } | null> {
+): Promise<{ price: number; change_pct: number; dataDate?: string } | null> {
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
     const res = await fetch(url, {
@@ -43,9 +44,17 @@ async function fetchYahooQuote(
     const json = (await res.json()) as YahooResponse;
     const result = json.chart?.result?.[0];
     if (!result) return null;
-    const { regularMarketPrice: price, chartPreviousClose: prev } = result.meta;
+    const { regularMarketPrice: price, chartPreviousClose: prev, regularMarketTime } = result.meta;
     const change_pct = prev > 0 ? ((price - prev) / prev) * 100 : 0;
-    return { price, change_pct };
+    // regularMarketTime: Unix timestamp → 米国時間（ET）の日付文字列
+    const dataDate = regularMarketTime
+      ? new Date(regularMarketTime * 1000).toLocaleDateString("ja-JP", {
+          timeZone: "America/New_York",
+          month: "numeric",
+          day: "numeric",
+        })
+      : undefined;
+    return { price, change_pct, dataDate };
   } catch {
     return null;
   }
@@ -349,6 +358,7 @@ export async function fetchMarketData(
 
   const sp500 = getIdx("sp500")?.price ?? 0;
   const sp500_chg = getIdx("sp500")?.change_pct ?? 0;
+  const sp500_data_date = getIdx("sp500")?.dataDate; // 米国時間での実際のデータ日付
   const nasdaq = getIdx("nasdaq")?.price ?? 0;
   const nasdaq_chg = getIdx("nasdaq")?.change_pct ?? 0;
   const vix = getIdx("vix")?.price ?? 0;
@@ -436,6 +446,7 @@ export async function fetchMarketData(
     usdjpy,
     sp500,
     sp500_chg,
+    sp500_data_date,
     nasdaq,
     nasdaq_chg,
     vix,

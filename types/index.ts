@@ -26,6 +26,7 @@ export interface MarketData {
   usdjpy: number;           // USD/JPY
   sp500: number;            // S&P500
   sp500_chg: number;        // S&P500前日比%
+  sp500_data_date?: string; // S&P500データの米国時間日付（例: "4/30"）
   nasdaq: number;           // NASDAQ
   nasdaq_chg: number;       // NASDAQ前日比%
   vix: number;              // VIX
