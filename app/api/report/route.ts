@@ -50,8 +50,8 @@ export async function POST() {
       topicsHtml   = "";
     }
 
-    // 4. チャートURL生成
-    const charts = buildCharts(market.portfolio, history, market);
+    // 4. チャートURL生成（POST APIでbase64埋め込み → モバイルでも確実に表示）
+    const charts = await buildCharts(market.portfolio, history, market);
 
     // 5. HTMLビルド（AI生成トピックスHTMLを渡す）
     const fullHtml = buildHtml(market, analysisHtml, charts, topicsHtml);

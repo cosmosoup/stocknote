@@ -7,13 +7,47 @@ const COLORS = [
   "#06b6d4", "#f97316", "#84cc16", "#ec4899", "#14b8a6", "#94a3b8", "#64748b",
 ];
 
+/** GET URLを生成（フォールバック用） */
 function toUrl(config: object, width = 700, height = 300): string {
   const encoded = encodeURIComponent(JSON.stringify(config));
   return `${QUICKCHART_BASE}?c=${encoded}&backgroundColor=%23ffffff&width=${width}&height=${height}&v=3`;
 }
 
-/** 構成比 横棒グラフ（ドーナツ置換） */
-function buildAllocationBar(portfolio: PortfolioEval[], cashJpy = 0, totalJpyWan = 0): string {
+/**
+ * QuickChart POST APIで画像を取得し base64 data URI を返す
+ * → URLが長すぎてモバイルで壊れる問題を解消（画像をHTML内に埋め込む）
+ * フォールバック: 取得失敗時は従来のGET URLを返す
+ */
+async function fetchChartBase64(config: object, width = 700, height = 300): Promise<string> {
+  try {
+    const res = await fetch(QUICKCHART_BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chart: config,
+        width,
+        height,
+        backgroundColor: "#ffffff",
+        version: "3",
+        devicePixelRatio: 2,
+      }),
+    });
+    if (!res.ok) throw new Error(`QuickChart POST ${res.status}`);
+    const buffer = await res.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    return `data:image/png;base64,${base64}`;
+  } catch {
+    // フォールバック: 従来のGET URL
+    return toUrl(config, width, height);
+  }
+}
+
+/** 構成比 横棒グラフ設定を返す */
+function buildAllocationBarConfig(
+  portfolio: PortfolioEval[],
+  cashJpy = 0,
+  totalJpyWan = 0
+): { config: object; height: number } {
   const sorted = [...portfolio].sort((a, b) => b.weight - a.weight);
   const top = sorted.slice(0, 11); // キャッシュ用に1枠空ける
   const othersWeight = sorted.slice(11).reduce((s, e) => s + e.weight, 0);
@@ -35,7 +69,7 @@ function buildAllocationBar(portfolio: PortfolioEval[], cashJpy = 0, totalJpyWan
     }
   }
 
-  // 投資資金はオレンジで表示（assets/page.tsx の BREAKDOWN カラーと統一）
+  // 投資資金はオレンジで表示
   const bgColors = labels.map((l, i) =>
     l === "投資資金" ? "#f97316" : COLORS[i % COLORS.length]
   );
@@ -72,12 +106,11 @@ function buildAllocationBar(portfolio: PortfolioEval[], cashJpy = 0, totalJpyWan
     },
   };
 
-  const height = Math.max(180, labels.length * 28 + 40);
-  return toUrl(config, 700, height);
+  return { config, height: Math.max(180, labels.length * 28 + 40) };
 }
 
-/** 銘柄別含損益 横棒グラフ */
-function buildBar(portfolio: PortfolioEval[]): string {
+/** 銘柄別含損益 横棒グラフ設定を返す */
+function buildBarConfig(portfolio: PortfolioEval[]): { config: object; height: number } {
   const sorted = [...portfolio].sort((a, b) => b.gain_pct - a.gain_pct);
   const labels = sorted.map((e) => e.ticker);
   const data = sorted.map((e) => parseFloat(e.gain_pct.toFixed(1)));
@@ -114,8 +147,7 @@ function buildBar(portfolio: PortfolioEval[]): string {
     },
   };
 
-  const height = Math.max(180, labels.length * 28 + 40);
-  return toUrl(config, 700, height);
+  return { config, height: Math.max(180, labels.length * 28 + 40) };
 }
 
 /** ポートフォリオ vs S&P500 累積リターン + ドローダウン
@@ -123,17 +155,17 @@ function buildBar(portfolio: PortfolioEval[]): string {
  *  - S&P500: sp500_chg を複利チェーン（同じローカル通貨ベースで対等比較）
  *  ★ 同日に複数レコードがある場合は最新を使用（二重カウント防止）
  */
-function buildCompare(history: HistoryPoint[]): { url: string; portPct: number; sp500Pct: number } {
+function buildCompareConfig(
+  history: HistoryPoint[]
+): { config: object; portPct: number; sp500Pct: number } | null {
   // 土日は市場が休場 → Yahoo Financeが前営業日と同じデータを返すため複利チェーンで二重カウントになる
-  // → 平日データのみを使用して正確な累積リターンを計算する
   const tradingDays = history.filter(h => {
     const day = new Date(h.date + "T12:00:00Z").getUTCDay(); // 0=日, 6=土
     return day !== 0 && day !== 6;
   });
-  if (tradingDays.length < 2) return { url: "", portPct: 0, sp500Pct: 0 };
+  if (tradingDays.length < 2) return null;
 
   // ★ 同日の重複レコードを排除: 同じ日付の場合、最後のレコード（最新生成）を使用
-  // report_date（JST）のupsert制約があっても、created_at（UTC）ベースの日付では重複が生じうる
   const uniqueByDate = new Map<string, HistoryPoint>();
   for (const h of tradingDays) {
     uniqueByDate.set(h.date, h); // 同日の場合は後から来た（より新しい）レコードで上書き
@@ -149,11 +181,8 @@ function buildCompare(history: HistoryPoint[]): { url: string; portPct: number; 
   const labels: string[] = [];
 
   for (const h of uniqueDays) {
-    // ポートフォリオ: 各銘柄の前日比%を現在価値で加重した日次リターンを複利チェーン
     portMul *= 1 + (h.daily_pct ?? 0) / 100;
-    // S&P500: 前日比%を複利チェーン（同じローカル通貨ベース）
     sp500Mul *= 1 + (h.sp500_chg ?? 0) / 100;
-    // ドローダウン: ポートフォリオのピークからの下落幅
     if (portMul > peakPort) peakPort = portMul;
 
     portData.push(parseFloat(((portMul - 1) * 100).toFixed(2)));
@@ -224,16 +253,20 @@ function buildCompare(history: HistoryPoint[]): { url: string; portPct: number; 
   };
 
   return {
-    url: toUrl(config, 900, 280),
+    config,
     portPct: portData[portData.length - 1] ?? 0,
     sp500Pct: sp500Data[sp500Data.length - 1] ?? 0,
   };
 }
 
-/** セクター別配分 横棒グラフ */
-function buildSectorBar(portfolio: PortfolioEval[], cashJpy = 0, totalJpyWan = 0): string {
+/** セクター別配分 横棒グラフ設定を返す */
+function buildSectorBarConfig(
+  portfolio: PortfolioEval[],
+  cashJpy = 0,
+  totalJpyWan = 0
+): { config: object; height: number } | null {
   const grandTotalJpy = totalJpyWan * 10000 + cashJpy;
-  if (grandTotalJpy <= 0) return "";
+  if (grandTotalJpy <= 0) return null;
 
   const sectorTotals = new Map<string, number>();
   for (const e of portfolio) {
@@ -265,37 +298,59 @@ function buildSectorBar(portfolio: PortfolioEval[], cashJpy = 0, totalJpyWan = 0
     },
   };
 
-  const height = Math.max(180, entries.length * 34 + 50);
-  return toUrl(config, 700, height);
+  return { config, height: Math.max(180, entries.length * 34 + 50) };
 }
 
-/** 全チャートURLを生成 */
-export function buildCharts(
+/**
+ * 全チャートURLを生成（非同期）
+ * QuickChart POST API でグラフを base64 PNG として取得し HTML に埋め込む
+ * → 長すぎる GET URL によるモバイル表示崩れを解消
+ */
+export async function buildCharts(
   portfolio: PortfolioEval[],
   history: HistoryPoint[],
   market?: Pick<MarketData, "cash_jpy" | "total_jpy">
-): Charts {
-  const compareResult = history.length >= 2 ? buildCompare(history) : null;
+): Promise<Charts> {
+  const cashJpy = market?.cash_jpy ?? 0;
+  const totalJpy = market?.total_jpy ?? 0;
+
+  // 各チャートのconfig・高さを先に同期で計算
+  const allocCfg = buildAllocationBarConfig(portfolio, cashJpy, totalJpy);
+  const barCfg   = buildBarConfig(portfolio);
+  const sectorCfg = buildSectorBarConfig(portfolio, cashJpy, totalJpy);
+  const compareCfg = history.length >= 2 ? buildCompareConfig(history) : null;
+
+  // 全チャートを並行して base64 取得
+  const [allocUrl, barUrl, compareUrl, sectorUrl] = await Promise.all([
+    fetchChartBase64(allocCfg.config, 700, allocCfg.height),
+    fetchChartBase64(barCfg.config, 700, barCfg.height),
+    compareCfg ? fetchChartBase64(compareCfg.config, 900, 280) : Promise.resolve(""),
+    sectorCfg  ? fetchChartBase64(sectorCfg.config, 700, sectorCfg.height) : Promise.resolve(""),
+  ]);
+
+  // compareStats 計算（buildCompareConfig と同じ重複排除ロジック）
+  let compareStats: Charts["compareStats"] = undefined;
+  if (compareCfg) {
+    const td = history.filter(h => {
+      const day = new Date(h.date + "T12:00:00Z").getUTCDay();
+      return day !== 0 && day !== 6;
+    });
+    const uniqueMap = new Map<string, HistoryPoint>();
+    for (const h of td) { uniqueMap.set(h.date, h); }
+    const uniqueDays = [...uniqueMap.values()];
+    compareStats = {
+      portPct: compareCfg.portPct,
+      sp500Pct: compareCfg.sp500Pct,
+      startDate: uniqueDays[0]?.date ?? history[0].date,
+      days: uniqueDays.length,
+    };
+  }
+
   return {
-    alloc: buildAllocationBar(portfolio, market?.cash_jpy ?? 0, market?.total_jpy ?? 0),
-    bar: buildBar(portfolio),
-    compare: compareResult?.url ?? "",
-    sector: buildSectorBar(portfolio, market?.cash_jpy ?? 0, market?.total_jpy ?? 0),
-    compareStats: compareResult && history.length >= 2 ? (() => {
-      const td = history.filter(h => {
-        const day = new Date(h.date + "T12:00:00Z").getUTCDay();
-        return day !== 0 && day !== 6;
-      });
-      // 重複排除（buildCompare と同じロジック）
-      const uniqueMap = new Map<string, HistoryPoint>();
-      for (const h of td) { uniqueMap.set(h.date, h); }
-      const uniqueDays = [...uniqueMap.values()];
-      return {
-        portPct: compareResult.portPct,
-        sp500Pct: compareResult.sp500Pct,
-        startDate: uniqueDays[0]?.date ?? history[0].date,
-        days: uniqueDays.length,
-      };
-    })() : undefined,
+    alloc:   allocUrl,
+    bar:     barUrl,
+    compare: compareUrl,
+    sector:  sectorUrl,
+    compareStats,
   };
 }
