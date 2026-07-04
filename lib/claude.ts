@@ -41,7 +41,10 @@ function buildPrompt(
   const pfLines = p
     .map((e) => {
       const base = `- ${e.ticker}: 現在値 ${e.is_jpy ? e.current_price.toFixed(0) + "円" : e.current_price.toFixed(2) + "USD"} / 前日比 ${e.change_pct >= 0 ? "+" : ""}${e.change_pct.toFixed(2)}% / 含損益 ${e.gain_pct >= 0 ? "+" : ""}${e.gain_pct.toFixed(1)}% (${e.gain_jpy >= 0 ? "+" : ""}${e.gain_jpy.toFixed(0)}円) / 構成比 ${e.weight.toFixed(1)}%`;
-      return e.hypothesis ? `${base} | 投資仮説: ${e.hypothesis}` : base;
+      const withHypothesis = e.hypothesis ? `${base} | 投資仮説: ${e.hypothesis}` : base;
+      if (e.price_stale) return `${withHypothesis} | ⚠️価格取得失敗のため含損益%は無視して分析すること`;
+      if (e.split_suspected) return `${withHypothesis} | ⚠️含損益%が異常値（株式分割等でデータがずれている可能性）のためこの数値には言及せず注意喚起のみに留めること`;
+      return withHypothesis;
     })
     .join("\n");
 

@@ -159,18 +159,12 @@ function buildCompareConfig(
   history: HistoryPoint[]
 ): { config: object; portPct: number; sp500Pct: number } | null {
   // 土日は市場が休場 → Yahoo Financeが前営業日と同じデータを返すため複利チェーンで二重カウントになる
+  // ※ dateキーは report_date（UNIQUE制約あり）なので同日重複は発生しない
   const tradingDays = history.filter(h => {
     const day = new Date(h.date + "T12:00:00Z").getUTCDay(); // 0=日, 6=土
     return day !== 0 && day !== 6;
   });
   if (tradingDays.length < 2) return null;
-
-  // ★ 同日の重複レコードを排除: 同じ日付の場合、最後のレコード（最新生成）を使用
-  const uniqueByDate = new Map<string, HistoryPoint>();
-  for (const h of tradingDays) {
-    uniqueByDate.set(h.date, h); // 同日の場合は後から来た（より新しい）レコードで上書き
-  }
-  const uniqueDays = [...uniqueByDate.values()]; // Mapは挿入順を保持 → 時系列順を維持
 
   let portMul = 1;
   let sp500Mul = 1;
@@ -180,7 +174,7 @@ function buildCompareConfig(
   const drawdownData: number[] = [];
   const labels: string[] = [];
 
-  for (const h of uniqueDays) {
+  for (const h of tradingDays) {
     portMul *= 1 + (h.daily_pct ?? 0) / 100;
     sp500Mul *= 1 + (h.sp500_chg ?? 0) / 100;
     if (portMul > peakPort) peakPort = portMul;
@@ -301,10 +295,28 @@ function buildSectorBarConfig(
   return { config, height: Math.max(180, entries.length * 34 + 50) };
 }
 
+/** buildCompareConfig と同じ平日フィルターで compareStats を算出 */
+function computeCompareStats(
+  history: HistoryPoint[],
+  compareCfg: { portPct: number; sp500Pct: number }
+): Charts["compareStats"] {
+  const tradingDays = history.filter(h => {
+    const day = new Date(h.date + "T12:00:00Z").getUTCDay();
+    return day !== 0 && day !== 6;
+  });
+  return {
+    portPct: compareCfg.portPct,
+    sp500Pct: compareCfg.sp500Pct,
+    startDate: tradingDays[0]?.date ?? history[0].date,
+    days: tradingDays.length,
+  };
+}
+
 /**
- * 全チャートURLを生成（非同期）
+ * 全チャートを生成（base64埋め込み・非同期）
  * QuickChart POST API でグラフを base64 PNG として取得し HTML に埋め込む
  * → 長すぎる GET URL によるモバイル表示崩れを解消
+ * Web表示・DB保存用（report_log.report_html）に使用する
  */
 export async function buildCharts(
   portfolio: PortfolioEval[],
@@ -328,29 +340,39 @@ export async function buildCharts(
     sectorCfg  ? fetchChartBase64(sectorCfg.config, 700, sectorCfg.height) : Promise.resolve(""),
   ]);
 
-  // compareStats 計算（buildCompareConfig と同じ重複排除ロジック）
-  let compareStats: Charts["compareStats"] = undefined;
-  if (compareCfg) {
-    const td = history.filter(h => {
-      const day = new Date(h.date + "T12:00:00Z").getUTCDay();
-      return day !== 0 && day !== 6;
-    });
-    const uniqueMap = new Map<string, HistoryPoint>();
-    for (const h of td) { uniqueMap.set(h.date, h); }
-    const uniqueDays = [...uniqueMap.values()];
-    compareStats = {
-      portPct: compareCfg.portPct,
-      sp500Pct: compareCfg.sp500Pct,
-      startDate: uniqueDays[0]?.date ?? history[0].date,
-      days: uniqueDays.length,
-    };
-  }
-
   return {
     alloc:   allocUrl,
     bar:     barUrl,
     compare: compareUrl,
     sector:  sectorUrl,
-    compareStats,
+    compareStats: compareCfg ? computeCompareStats(history, compareCfg) : undefined,
+  };
+}
+
+/**
+ * 全チャートを生成（QuickChart GET URL・同期）
+ * 画像をHTMLに埋め込まず外部URL参照にする → HTML自体が軽量
+ * メール配信用に使用する（base64埋め込みだとGmailの102KB制限で本文が
+ * 「メッセージの全文を表示」に切り詰められてしまうため）
+ */
+export function buildChartsHosted(
+  portfolio: PortfolioEval[],
+  history: HistoryPoint[],
+  market?: Pick<MarketData, "cash_jpy" | "total_jpy">
+): Charts {
+  const cashJpy = market?.cash_jpy ?? 0;
+  const totalJpy = market?.total_jpy ?? 0;
+
+  const allocCfg = buildAllocationBarConfig(portfolio, cashJpy, totalJpy);
+  const barCfg   = buildBarConfig(portfolio);
+  const sectorCfg = buildSectorBarConfig(portfolio, cashJpy, totalJpy);
+  const compareCfg = history.length >= 2 ? buildCompareConfig(history) : null;
+
+  return {
+    alloc:   toUrl(allocCfg.config, 700, allocCfg.height),
+    bar:     toUrl(barCfg.config, 700, barCfg.height),
+    compare: compareCfg ? toUrl(compareCfg.config, 900, 280) : "",
+    sector:  sectorCfg ? toUrl(sectorCfg.config, 700, sectorCfg.height) : "",
+    compareStats: compareCfg ? computeCompareStats(history, compareCfg) : undefined,
   };
 }

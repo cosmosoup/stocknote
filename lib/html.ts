@@ -219,9 +219,14 @@ export function buildHtml(
     const gainPctStr = fmtPct(e.gain_pct);
     const gainBar = Math.min(Math.abs(e.gain_pct), 20) * 5;
     const gainBarColor = e.gain_pct >= 0 ? "#008b8b" : "#dc2626";
+    const warnBadge = e.price_stale
+      ? `<span title="価格取得に失敗したため取得単価で代用表示中。含損益%は無視してください" style="color:#dc2626;font-weight:700;margin-left:4px;cursor:help">⚠</span>`
+      : e.split_suspected
+      ? `<span title="含損益%が異常値です。株式分割・併合等でコストデータがずれている可能性があります。ポートフォリオ管理画面で取得単価・保有口数をご確認ください" style="color:#d97706;font-weight:700;margin-left:4px;cursor:help">⚠</span>`
+      : "";
     return `
     <tr>
-      <td><strong style="color:#1e293b;font-size:0.95rem;font-weight:600">${escHtml(e.ticker)}</strong></td>
+      <td><strong style="color:#1e293b;font-size:0.95rem;font-weight:600">${escHtml(e.ticker)}</strong>${warnBadge}</td>
       <td style="color:#1e293b;font-weight:600;white-space:nowrap">${escHtml(holdingStr)}</td>
       <td style="color:#475569">${escHtml(priceStr)}</td>
       <td style="color:${pctColorLight(e.change_pct)};font-weight:500">${fmtPct(e.change_pct)}</td>
@@ -235,6 +240,15 @@ export function buildHtml(
       <td style="color:#64748b">${fmt(e.weight, 1)}%</td>
     </tr>`;
   }).join("");
+
+  // 価格取得失敗・異常値の警告サマリー（テーブル直下に表示）
+  const dataWarnings = market.portfolio.filter((e) => e.price_stale || e.split_suspected);
+  const dataWarningHtml = dataWarnings.length > 0 ? `
+    <div style="margin-top:10px;padding:10px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:0.76rem;color:#92400e;line-height:1.6">
+      ⚠ <strong>${dataWarnings.map((e) => escHtml(e.ticker)).join("・")}</strong> の含損益%は現在信頼できません。
+      ${dataWarnings.some((e) => e.price_stale) ? "価格取得に失敗した銘柄は取得単価で代用表示しています。" : ""}
+      ${dataWarnings.some((e) => e.split_suspected) ? "異常値の銘柄は株式分割・併合等で取得単価データがずれている可能性があります。資産管理画面で保有口数・取得単価をご確認ください。" : ""}
+    </div>` : "";
 
   // パフォーマンス比較グラフ + 読み方ガイド
   let chartCompare = "";
@@ -634,6 +648,7 @@ export function buildHtml(
         <tbody>${tableRows}</tbody>
       </table>
     </div>
+    ${dataWarningHtml}
   </div>
 
   <!-- AI分析レポート -->

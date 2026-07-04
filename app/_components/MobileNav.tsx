@@ -48,6 +48,12 @@ const SlidersIcon = () => (
   </svg>
 );
 
+const ActivityIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </svg>
+);
+
 const GenerateIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -59,6 +65,7 @@ const GenerateIcon = () => (
 
 const NAV_ITEMS = [
   { href: "/",          label: "ホーム", Icon: HomeIcon },
+  { href: "/market",    label: "市況",   Icon: ActivityIcon },
   { href: "/history",   label: "一覧",   Icon: ListIcon },
   { href: "/assets",    label: "資産",   Icon: ChartIcon },
   { href: "/portfolio", label: "管理",   Icon: SlidersIcon },
@@ -70,8 +77,8 @@ export default function MobileNav({ active, onGenerate, generating }: Props) {
       className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-white border-t border-slate-200"
       style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 12px)" }}
     >
-      <div className="grid grid-cols-5 h-[76px]">
-        {/* ホーム・一覧・資産・管理 */}
+      <div className="grid grid-cols-6 h-[76px]">
+        {/* ホーム・市況・一覧・資産・管理 */}
         {NAV_ITEMS.map(({ href, label, Icon }) => (
           <a
             key={href}

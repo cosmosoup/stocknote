@@ -19,6 +19,8 @@ export interface PortfolioEval extends PortfolioItem {
   weight: number;            // ポートフォリオ構成比%
   is_jpy: boolean;           // 日本株フラグ
   sector?: string;           // セクター（日本語）
+  price_stale?: boolean;     // 価格取得失敗（取得単価で代用中）→ 含損益%は信頼できない
+  split_suspected?: boolean; // 含損益%が異常値（株式分割/併合等でコストデータがずれている可能性）
 }
 
 // 市場データ

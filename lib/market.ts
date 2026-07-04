@@ -379,6 +379,8 @@ export async function fetchMarketData(
   const evaluated: PortfolioEval[] = portfolio.map((item, i) => {
     const quote = portfolioResults[i];
     const is_jpy = isJpyTicker(item.ticker);
+    // 価格取得失敗時は取得単価で代用（含損益%は信頼できないため price_stale フラグを立てる）
+    const price_stale = !quote;
     const current_price = quote?.price ?? item.cost_price;
     const change_pct = quote?.change_pct ?? 0;
 
@@ -392,6 +394,10 @@ export async function fetchMarketData(
     const current_value_jpy = current_price_jpy * item.shares;
     const gain_jpy = current_value_jpy - cost_jpy;
     const gain_pct = cost_jpy > 0 ? (gain_jpy / cost_jpy) * 100 : 0;
+
+    // 含損益%が極端な値（株式分割・併合等でコストデータがずれている可能性）を検知
+    // 中長期投資では大きな含み益・含み損もあり得るため、明らかに異常な範囲のみ警告
+    const split_suspected = !price_stale && (gain_pct <= -70 || gain_pct >= 900);
 
     const yahooSym = portfolioYahooSymbols[i];
     const sectorInfo = sectorMap.get(yahooSym);
@@ -408,6 +414,8 @@ export async function fetchMarketData(
       weight: 0, // 後で計算
       is_jpy,
       sector,
+      price_stale,
+      split_suspected,
     };
   });
 

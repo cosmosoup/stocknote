@@ -3,7 +3,7 @@ import { loadPortfolio, saveReportLog, getHistoryData, getMacroStrategy, getCash
 import { fetchMarketData, fetchBtcJpy } from "@/lib/market";
 import { fetchNews } from "@/lib/news";
 import { generateReport } from "@/lib/claude";
-import { buildCharts } from "@/lib/charts";
+import { buildCharts, buildChartsHosted } from "@/lib/charts";
 import { buildHtml } from "@/lib/html";
 import { convertMdToHtml } from "@/lib/markdown";
 import { sendReportEmail } from "@/lib/email";
@@ -50,11 +50,16 @@ export async function POST() {
       topicsHtml   = "";
     }
 
-    // 4. チャートURL生成（POST APIでbase64埋め込み → モバイルでも確実に表示）
+    // 4. チャートURL生成
+    // Web表示・DB保存用: POST APIでbase64埋め込み → モバイルでも確実に表示
     const charts = await buildCharts(market.portfolio, history, market);
+    // メール用: 外部URL参照（base64埋め込みだとHTMLが肥大化し、Gmailの102KB制限で
+    // 本文が「メッセージの全文を表示」に切り詰められるため）
+    const emailCharts = buildChartsHosted(market.portfolio, history, market);
 
     // 5. HTMLビルド（AI生成トピックスHTMLを渡す）
     const fullHtml = buildHtml(market, analysisHtml, charts, topicsHtml);
+    const emailHtml = buildHtml(market, analysisHtml, emailCharts, topicsHtml);
 
     // 6. Supabaseに保存
     // 総資産スナップショット（失敗しても処理は続行）
@@ -92,7 +97,7 @@ export async function POST() {
       timeZone: "Asia/Tokyo",
     });
     try {
-      await sendReportEmail(fullHtml, dateStr);
+      await sendReportEmail(emailHtml, dateStr);
     } catch (emailErr) {
       console.error("Email send failed:", emailErr);
     }

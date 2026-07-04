@@ -107,6 +107,10 @@ export default function HomePage() {
             />
           </a>
           <div className="flex items-center gap-2 sm:gap-4">
+            <a href="/market" className="text-slate-500 hover:text-slate-900 text-xs sm:text-sm transition-colors">
+              <span className="sm:hidden">市況</span>
+              <span className="hidden sm:inline">マーケット速報</span>
+            </a>
             <a href="/history" className="text-slate-500 hover:text-slate-900 text-xs sm:text-sm transition-colors">
               <span className="sm:hidden">一覧</span>
               <span className="hidden sm:inline">レポート一覧</span>

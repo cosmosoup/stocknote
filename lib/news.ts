@@ -14,9 +14,10 @@ const RSS_FEEDS = [
   { url: "https://www3.nhk.or.jp/rss/news/cat4.xml",               source: "NHK経済" },
   { url: "https://www3.nhk.or.jp/rss/news/cat6.xml",               source: "NHK国際" },
   // ── 海外マーケット・経済全般 ──
-  { url: "https://feeds.reuters.com/reuters/marketsNews",           source: "Reuters Markets" },
-  { url: "https://feeds.reuters.com/reuters/businessNews",          source: "Reuters Business" },
-  { url: "https://feeds.reuters.com/reuters/topNews",               source: "Reuters Top News" },
+  // ※ Reuters公式RSS(feeds.reuters.com)は配信終了済みのため以下に差し替え
+  { url: "https://www.nasdaq.com/feed/rssoutbound?category=Markets", source: "Nasdaq Markets" },
+  { url: "https://www.ft.com/rss/home",                              source: "Financial Times" },
+  { url: "https://www.cnbc.com/id/100727362/device/rss/rss.html",    source: "CNBC World" },
   // CNBC（Fed動向・経済指標に強い）
   { url: "https://www.cnbc.com/id/10000664/device/rss/rss.html",   source: "CNBC Finance" },
   { url: "https://www.cnbc.com/id/20910258/device/rss/rss.html",   source: "CNBC Economy" },
