@@ -21,6 +21,15 @@ export interface PortfolioEval extends PortfolioItem {
   sector?: string;           // セクター（日本語）
   price_stale?: boolean;     // 価格取得失敗（取得単価で代用中）→ 含損益%は信頼できない
   split_suspected?: boolean; // 含損益%が異常値（株式分割/併合等でコストデータがずれている可能性）
+  week52_high?: number;      // 52週高値（現地通貨）
+  week52_low?: number;       // 52週安値（現地通貨）
+}
+
+// 米国セクターETFの前日比（セクターヒートマップ用）
+export interface SectorHeat {
+  ticker: string;      // 'XLK' 等
+  sector: string;      // 日本語セクター名
+  change_pct: number;  // 前日比%
 }
 
 // 市場データ
@@ -41,6 +50,7 @@ export interface MarketData {
   brent_chg: number;        // Brent前日比%
   dxy: number;              // ドル指数（DXY）
   fear_greed: number;       // Fear & Greed Index
+  sector_heatmap?: SectorHeat[]; // 米国セクターETF前日比一覧
   portfolio: PortfolioEval[];
   cash_jpy: number;         // キャッシュ残高（円）
   total_jpy: number;        // 株式評価額（万円、キャッシュ除く）
@@ -58,6 +68,9 @@ export interface NewsItem {
   summary: string;
   source: string;
   pubDate?: string;
+  link?: string;         // 元記事URL
+  title_ja?: string;     // 日本語タイトル（翻訳済み・キャッシュ利用）
+  summary_ja?: string;   // 日本語要約（翻訳済み・キャッシュ利用）
 }
 
 // チャートURL群

@@ -1,4 +1,4 @@
-import type { PortfolioItem, PortfolioEval, MarketData } from "@/types";
+import type { PortfolioItem, PortfolioEval, MarketData, SectorHeat } from "@/types";
 
 // Yahoo Finance v8 API レスポンス型
 interface YahooMeta {
@@ -6,6 +6,8 @@ interface YahooMeta {
   chartPreviousClose: number;
   regularMarketTime?: number; // Unix timestamp（米国時間での最終取引日判定に使用）
   currency?: string;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
 }
 interface YahooResponse {
   chart: {
@@ -26,10 +28,10 @@ interface YahooV7Response {
   quoteResponse?: { result?: YahooV7Quote[] };
 }
 
-/** Yahoo Finance v8 APIで1銘柄の価格・前日比を取得 */
+/** Yahoo Finance v8 APIで1銘柄の価格・前日比・52週レンジを取得 */
 async function fetchYahooQuote(
   symbol: string
-): Promise<{ price: number; change_pct: number; dataDate?: string } | null> {
+): Promise<{ price: number; change_pct: number; dataDate?: string; week52High?: number; week52Low?: number } | null> {
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
     const res = await fetch(url, {
@@ -44,7 +46,13 @@ async function fetchYahooQuote(
     const json = (await res.json()) as YahooResponse;
     const result = json.chart?.result?.[0];
     if (!result) return null;
-    const { regularMarketPrice: price, chartPreviousClose: prev, regularMarketTime } = result.meta;
+    const {
+      regularMarketPrice: price,
+      chartPreviousClose: prev,
+      regularMarketTime,
+      fiftyTwoWeekHigh,
+      fiftyTwoWeekLow,
+    } = result.meta;
     const change_pct = prev > 0 ? ((price - prev) / prev) * 100 : 0;
     // regularMarketTime: Unix timestamp → 米国時間（ET）の日付文字列
     const dataDate = regularMarketTime
@@ -54,10 +62,37 @@ async function fetchYahooQuote(
           day: "numeric",
         })
       : undefined;
-    return { price, change_pct, dataDate };
+    return { price, change_pct, dataDate, week52High: fiftyTwoWeekHigh, week52Low: fiftyTwoWeekLow };
   } catch {
     return null;
   }
+}
+
+// 米国セクターSPDR ETF（セクターローテーション把握用）
+const SECTOR_ETFS: { ticker: string; sector: string }[] = [
+  { ticker: "XLK", sector: "テクノロジー" },
+  { ticker: "XLF", sector: "金融" },
+  { ticker: "XLE", sector: "エネルギー" },
+  { ticker: "XLV", sector: "ヘルスケア" },
+  { ticker: "XLY", sector: "一般消費財" },
+  { ticker: "XLP", sector: "生活必需品" },
+  { ticker: "XLI", sector: "資本財" },
+  { ticker: "XLB", sector: "素材" },
+  { ticker: "XLRE", sector: "不動産" },
+  { ticker: "XLU", sector: "公共事業" },
+  { ticker: "XLC", sector: "通信" },
+];
+
+/** 米国11セクターETFの前日比を取得（セクターヒートマップ用） */
+async function fetchSectorHeatmap(): Promise<SectorHeat[]> {
+  const results = await Promise.all(
+    SECTOR_ETFS.map((s) => fetchYahooQuote(s.ticker))
+  );
+  return SECTOR_ETFS.map((s, i) => ({
+    ticker: s.ticker,
+    sector: s.sector,
+    change_pct: results[i]?.change_pct ?? 0,
+  })).filter((_, i) => results[i] !== null);
 }
 
 /** USD/JPYをExchangeRate APIで取得（フォールバックはYahoo Finance） */
@@ -317,10 +352,11 @@ export async function fetchMarketData(
   portfolio: PortfolioItem[],
   cashJpy = 0
 ): Promise<MarketData> {
-  // --- USD/JPY と Fear&Greed は並行取得 ---
-  const [usdjpy, fear_greed] = await Promise.all([
+  // --- USD/JPY・Fear&Greed・セクターヒートマップは並行取得 ---
+  const [usdjpy, fear_greed, sector_heatmap] = await Promise.all([
     fetchUsdJpy(),
     fetchFearGreed(),
+    fetchSectorHeatmap(),
   ]);
 
   // --- 指数・商品シンボル ---
@@ -416,6 +452,8 @@ export async function fetchMarketData(
       sector,
       price_stale,
       split_suspected,
+      week52_high: quote?.week52High,
+      week52_low: quote?.week52Low,
     };
   });
 
@@ -467,6 +505,7 @@ export async function fetchMarketData(
     brent_chg,
     dxy,
     fear_greed,
+    sector_heatmap,
     portfolio: evaluated,
     cash_jpy: cashJpy,
     total_jpy,

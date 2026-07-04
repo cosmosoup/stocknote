@@ -37,6 +37,7 @@ export async function fetchNews(): Promise<NewsItem[]> {
         summary: item.contentSnippet ?? item.summary ?? item.content ?? "",
         source,
         pubDate: item.pubDate ?? item.isoDate,
+        link: item.link,
       }));
     })
   );

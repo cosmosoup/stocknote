@@ -116,6 +116,39 @@ export async function getMacroStrategy(): Promise<string> {
   return (data as { value: string }).value;
 }
 
+/**
+ * ニュース翻訳キャッシュを取得（記事タイトルをキーにしたJPタイトル・要約のマップ）
+ * settingsテーブルに1レコードのJSON Blobとして保存（新規テーブル追加を避けるため）
+ */
+export async function getNewsTranslationCache(): Promise<Record<string, { title_ja: string; summary_ja: string }>> {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("settings")
+    .select("value")
+    .eq("key", "news_translation_cache")
+    .single();
+  if (error || !data) return {};
+  try {
+    return JSON.parse((data as { value: string }).value) as Record<string, { title_ja: string; summary_ja: string }>;
+  } catch {
+    return {};
+  }
+}
+
+/** ニュース翻訳キャッシュを保存（直近300件のみ保持しJSONサイズを抑制） */
+export async function saveNewsTranslationCache(
+  cache: Record<string, { title_ja: string; summary_ja: string }>
+): Promise<void> {
+  const MAX_CACHE = 300;
+  const entries = Object.entries(cache);
+  const trimmed = entries.length > MAX_CACHE ? Object.fromEntries(entries.slice(-MAX_CACHE)) : cache;
+  const db = getSupabase();
+  const { error } = await db
+    .from("settings")
+    .upsert([{ key: "news_translation_cache", value: JSON.stringify(trimmed) }], { onConflict: "key" });
+  if (error) throw new Error(`Supabase news_translation_cache error: ${error.message}`);
+}
+
 /** キャッシュ残高（円）を取得 */
 export async function getCashJpy(): Promise<number> {
   const db = getSupabase();
