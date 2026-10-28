@@ -92,16 +92,26 @@ export async function getHistoryData(limit = 30): Promise<HistoryPoint[]> {
   }));
 }
 
-/** 過去ログ一覧（履歴ページ用） */
-export async function getReportHistory(limit = 60): Promise<Omit<ReportLog, "report_html" | "market_data">[]> {
+/**
+ * 過去ログ一覧（履歴ページ用）
+ * limit 未指定なら全件取得。Supabaseは1リクエスト最大1000件のため、ページ分割して集める
+ */
+export async function getReportHistory(limit?: number): Promise<Omit<ReportLog, "report_html" | "market_data">[]> {
   const db = getSupabase();
-  const { data, error } = await db
-    .from("report_log")
-    .select("id, created_at, daily_pct, total_pct, total_jpy")
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  if (error) return [];
-  return data as Omit<ReportLog, "report_html" | "market_data">[];
+  const PAGE = 1000;
+  const rows: Omit<ReportLog, "report_html" | "market_data">[] = [];
+  while (limit === undefined || rows.length < limit) {
+    const { data, error } = await db
+      .from("report_log")
+      .select("id, created_at, daily_pct, total_pct, total_jpy")
+      .order("created_at", { ascending: false })
+      .range(rows.length, rows.length + PAGE - 1);
+    if (error) return rows;
+    const page = data as Omit<ReportLog, "report_html" | "market_data">[];
+    rows.push(...page);
+    if (page.length < PAGE) break;
+  }
+  return limit === undefined ? rows : rows.slice(0, limit);
 }
 
 /** マクロ投資戦略を取得 */
