@@ -29,7 +29,7 @@ interface YahooV7Response {
 }
 
 /** Yahoo Finance v8 APIで1銘柄の価格・前日比・52週レンジを取得 */
-async function fetchYahooQuote(
+export async function fetchYahooQuote(
   symbol: string
 ): Promise<{ price: number; change_pct: number; dataDate?: string; week52High?: number; week52Low?: number } | null> {
   try {
@@ -119,6 +119,7 @@ async function fetchYahooTrend(symbol: string): Promise<TrendStats | null> {
     const ma50 = ma(50);
     const ma200 = ma(200);
     const high = Math.max(...closes);
+    const low = Math.min(...closes);
 
     return {
       ret_1w: retBack(5),
@@ -130,6 +131,8 @@ async function fetchYahooTrend(symbol: string): Promise<TrendStats | null> {
       vs_ma200: ma200 ? (last / ma200 - 1) * 100 : null,
       dd_from_high: (last / high - 1) * 100,
       bars: n,
+      high_1y: high,
+      low_1y: low,
       split_adjusted: splitAdjusted || undefined,
     };
   } catch {
@@ -507,6 +510,19 @@ export async function fetchMarketData(
     }
   }
 
+  // --- 52週レンジの分割補正 ---
+  // Yahooのメタ情報の52週高安値は、分割前の価格を含むことがある（例: 2559の10分割で高値が約8倍に見える）。
+  // レンジが現在値から極端に離れている銘柄だけ、1年分の日足（分割補正後）でレンジを再計算する
+  const rangeFix = new Map<number, { high: number; low: number }>();
+  await Promise.all(
+    portfolioResults.map(async (q, i) => {
+      if (!q || !q.week52High || !q.week52Low) return;
+      if (q.week52High / q.price < 3 && q.price / q.week52Low < 3) return;
+      const t = holdingTrends[i] ?? (await fetchYahooTrend(portfolioYahooSymbols[i]));
+      if (t?.split_adjusted) rangeFix.set(i, { high: t.high_1y, low: t.low_1y });
+    })
+  );
+
   // --- ポートフォリオ評価計算 ---
   const evaluated: PortfolioEval[] = portfolio.map((item, i) => {
     const quote = portfolioResults[i];
@@ -548,8 +564,8 @@ export async function fetchMarketData(
       sector,
       price_stale,
       split_suspected,
-      week52_high: quote?.week52High,
-      week52_low: quote?.week52Low,
+      week52_high: rangeFix.get(i)?.high ?? quote?.week52High,
+      week52_low: rangeFix.get(i)?.low ?? quote?.week52Low,
       trend: holdingTrends[i] ?? undefined,
     };
   });

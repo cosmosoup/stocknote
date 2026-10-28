@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { loadPortfolio, saveReportLog, getHistoryData, getMacroStrategy, getCashJpy, getOtherAssets, saveAssetSnapshot } from "@/lib/supabase";
 import { fetchMarketData, fetchBtcJpy } from "@/lib/market";
 import { fetchNews } from "@/lib/news";
+import { fetchMacroContext } from "@/lib/macro";
 import { generateReport } from "@/lib/claude";
 import { buildCharts, buildChartsHosted } from "@/lib/charts";
 import { buildHtml } from "@/lib/html";
@@ -28,7 +29,7 @@ export async function POST() {
     // history: チャート用(直近30件) / longHistory: AIの構造分析用(約1年分。期間別の対S&P500成績・ドローダウン算出)
     const [cashJpy, news, history, longHistory, macroStrategy, otherAssets] = await Promise.all([
       getCashJpy(),
-      fetchNews(),
+      fetchNews(30), // マクロ・地政学の材料を増やすため、レポート用は30件
       getHistoryData(30),
       getHistoryData(250),
       getMacroStrategy(),
@@ -37,8 +38,12 @@ export async function POST() {
     // withTrend: 1年分の日足から中期トレンド(騰落率・移動平均・高値比)を算出（AIの俯瞰分析用）
     const market = await fetchMarketData(portfolio, cashJpy, { withTrend: true });
 
+    // マクロ環境・先行きの変数（金利・物価・雇用・信用・センチメント・IPO・決算・経済指標カレンダー・FRB）
+    const macro = await fetchMacroContext(market, portfolio.map((p) => p.ticker));
+    if (macro.failed.length) console.warn("マクロデータの一部を取得できませんでした:", macro.failed.join(", "));
+
     // 3. Claude APIでレポート生成
-    const reportMd = await generateReport(market, news, longHistory, macroStrategy);
+    const reportMd = await generateReport(market, news, longHistory, macroStrategy, macro.text);
 
     // 「## 📰 本日のマーケットトピックス」セクションをAI分析と分離
     const TOPICS_MARKER = "## 📰 本日のマーケットトピックス";

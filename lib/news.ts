@@ -21,14 +21,17 @@ const RSS_FEEDS = [
   // CNBC（Fed動向・経済指標に強い）
   { url: "https://www.cnbc.com/id/10000664/device/rss/rss.html",   source: "CNBC Finance" },
   { url: "https://www.cnbc.com/id/20910258/device/rss/rss.html",   source: "CNBC Economy" },
+  // 地政学・インシデント・政策（マーケット専門誌に出にくい世界の出来事）
+  { url: "https://feeds.bbci.co.uk/news/world/rss.xml",            source: "BBC World" },
+  { url: "https://www.cnbc.com/id/100003114/device/rss/rss.html",  source: "CNBC Top News" },
   // MarketWatch（相場解説・要人発言に強い）
   { url: "https://feeds.marketwatch.com/marketwatch/topstories/",  source: "MarketWatch" },
   // Yahoo Finance（幅広いカバレッジ）
   { url: "https://finance.yahoo.com/news/rssindex",                 source: "Yahoo Finance" },
 ];
 
-/** RSSからニュース最新20件を取得 */
-export async function fetchNews(): Promise<NewsItem[]> {
+/** RSSからニュース最新limit件を取得（既定20件。AIレポート用は多めに取得してマクロ・地政学の材料を増やす） */
+export async function fetchNews(limit = 20): Promise<NewsItem[]> {
   const results = await Promise.allSettled(
     RSS_FEEDS.map(async ({ url, source }) => {
       const feed = await parser.parseURL(url);
@@ -49,14 +52,14 @@ export async function fetchNews(): Promise<NewsItem[]> {
     }
   }
 
-  // 最新20件に絞る（日時でソート）
+  // 最新limit件に絞る（日時でソート）
   allNews.sort((a, b) => {
     const da = a.pubDate ? new Date(a.pubDate).getTime() : 0;
     const db = b.pubDate ? new Date(b.pubDate).getTime() : 0;
     return db - da;
   });
 
-  return allNews.slice(0, 20);
+  return allNews.slice(0, limit);
 }
 
 /** ニュースをAIプロンプト用の文字列に変換 */

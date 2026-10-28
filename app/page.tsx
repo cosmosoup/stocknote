@@ -19,7 +19,7 @@ const GEN_STEPS = [
   { icon: "🤖", label: "Claude AIがポートフォリオを分析中..." },
   { icon: "📄", label: "レポートを組み立て中..." },
 ];
-const STEP_TIMINGS = [0, 6000, 14000, 72000];
+const STEP_TIMINGS = [0, 8000, 18000, 150000];
 
 export default function HomePage() {
   const [reportHtml, setReportHtml] = useState<string | null>(null);
@@ -54,7 +54,7 @@ export default function HomePage() {
         setTimeout(() => setStep(i + 1), t)
       );
       intervalRef.current = setInterval(() => {
-        setProgress((p) => Math.min(p + 1.05, 95));
+        setProgress((p) => Math.min(p + 0.5, 95)); // 生成に3分前後かかるため、約190秒で95%に到達するペース
       }, 1000);
     } else {
       timersRef.current.forEach(clearTimeout);

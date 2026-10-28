@@ -37,6 +37,8 @@ export interface TrendStats {
   vs_ma200: number | null;     // 200日移動平均からの乖離%（データ不足ならnull）
   dd_from_high: number | null; // 直近1年高値からの下落率%（0以下）
   bars: number;                // 算出に使えた日足本数
+  high_1y: number;             // 直近1年の終値ベース高値（分割補正後）
+  low_1y: number;              // 直近1年の終値ベース安値（分割補正後）
   split_adjusted?: boolean;    // 株式分割・併合を検知して価格を補正済み
 }
 
