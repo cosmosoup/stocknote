@@ -1,4 +1,4 @@
-import type { PortfolioItem, PortfolioEval, MarketData, SectorHeat } from "@/types";
+import type { PortfolioItem, PortfolioEval, MarketData, SectorHeat, TrendStats } from "@/types";
 
 // Yahoo Finance v8 API レスポンス型
 interface YahooMeta {
@@ -63,6 +63,75 @@ async function fetchYahooQuote(
         })
       : undefined;
     return { price, change_pct, dataDate, week52High: fiftyTwoWeekHigh, week52Low: fiftyTwoWeekLow };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 1年分の日足終値から中期トレンド指標を算出
+ * ※ 前日比用の fetchYahooQuote とは別取得（range=1y では chartPreviousClose が1年前の値になるため）
+ */
+async function fetchYahooTrend(symbol: string): Promise<TrendStats | null> {
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1y`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        Accept: "application/json",
+      },
+      next: { revalidate: 0 },
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      chart?: { result?: Array<{ indicators?: { quote?: Array<{ close?: (number | null)[] }> } }> | null };
+    };
+    const raw = json.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+    if (!raw) return null;
+    const closes = raw.filter((v): v is number => typeof v === "number" && v > 0);
+    const n = closes.length;
+    if (n < 10) return null;
+
+    // 株式分割・併合の補正: Yahooは一部銘柄（例: 日本のETF）で分割前の価格を補正せずに返す。
+    // 前日比が「ちょうど整数分の1（分割）／整数倍（併合）」になる日を分割とみなし、それ以前の価格を新基準に揃える
+    let splitAdjusted = false;
+    for (let i = 1; i < n; i++) {
+      const r = closes[i] / closes[i - 1];
+      let factor = 0;
+      if (r <= 0.55) {
+        const k = Math.round(1 / r);
+        if (k >= 2 && Math.abs(1 / r - k) / k < 0.08) factor = 1 / k;
+      } else if (r >= 1.8) {
+        const k = Math.round(r);
+        if (Math.abs(r - k) / k < 0.08) factor = k;
+      }
+      if (factor) {
+        for (let j = 0; j < i; j++) closes[j] *= factor;
+        splitAdjusted = true;
+      }
+    }
+
+    const last = closes[n - 1];
+    const retBack = (days: number): number | null =>
+      n > days ? (last / closes[n - 1 - days] - 1) * 100 : null;
+    const ma = (days: number): number | null =>
+      n >= days ? closes.slice(n - days).reduce((s, v) => s + v, 0) / days : null;
+    const ma50 = ma(50);
+    const ma200 = ma(200);
+    const high = Math.max(...closes);
+
+    return {
+      ret_1w: retBack(5),
+      ret_1m: retBack(21),
+      ret_3m: retBack(63),
+      ret_6m: retBack(126),
+      ret_1y: (last / closes[0] - 1) * 100,
+      vs_ma50: ma50 ? (last / ma50 - 1) * 100 : null,
+      vs_ma200: ma200 ? (last / ma200 - 1) * 100 : null,
+      dd_from_high: (last / high - 1) * 100,
+      bars: n,
+      split_adjusted: splitAdjusted || undefined,
+    };
   } catch {
     return null;
   }
@@ -350,7 +419,8 @@ function isJpyTicker(ticker: string): boolean {
 /** 全市場データを取得・計算して MarketData を返す */
 export async function fetchMarketData(
   portfolio: PortfolioItem[],
-  cashJpy = 0
+  cashJpy = 0,
+  options: { withTrend?: boolean } = {}
 ): Promise<MarketData> {
   // --- USD/JPY・Fear&Greed・セクターヒートマップは並行取得 ---
   const [usdjpy, fear_greed, sector_heatmap] = await Promise.all([
@@ -411,6 +481,32 @@ export async function fetchMarketData(
   const portfolioYahooSymbols = portfolio.map((p) => toYahooSymbol(p.ticker));
   const sectorMap = await fetchYahooSectors(portfolioYahooSymbols);
 
+  // --- 中期トレンド（レポート生成時のみ。前日比用とは別に1年分の日足を取得） ---
+  let holdingTrends: (TrendStats | null)[] = [];
+  let trends: Record<string, TrendStats> | undefined;
+  if (options.withTrend) {
+    const indexTrendSymbols: Record<string, string> = {
+      sp500: "^GSPC", nasdaq: "^IXIC", vix: "^VIX", tnx: "^TNX",
+      usdjpy: "JPY=X", gold: "GC=F", oil: "CL=F",
+    };
+    const trendKeys = Object.keys(indexTrendSymbols);
+    const [holdingResults, indexResults, sectorResults] = await Promise.all([
+      Promise.all(portfolioYahooSymbols.map((s) => fetchYahooTrend(s))),
+      Promise.all(trendKeys.map((k) => fetchYahooTrend(indexTrendSymbols[k]))),
+      Promise.all(SECTOR_ETFS.map((s) => fetchYahooTrend(s.ticker))),
+    ]);
+    holdingTrends = holdingResults;
+    trends = {};
+    trendKeys.forEach((k, i) => {
+      const t = indexResults[i];
+      if (t) trends![k] = t;
+    });
+    for (const s of sector_heatmap) {
+      const t = sectorResults[SECTOR_ETFS.findIndex((x) => x.ticker === s.ticker)];
+      if (t) s.trend = t;
+    }
+  }
+
   // --- ポートフォリオ評価計算 ---
   const evaluated: PortfolioEval[] = portfolio.map((item, i) => {
     const quote = portfolioResults[i];
@@ -454,6 +550,7 @@ export async function fetchMarketData(
       split_suspected,
       week52_high: quote?.week52High,
       week52_low: quote?.week52Low,
+      trend: holdingTrends[i] ?? undefined,
     };
   });
 
@@ -506,6 +603,7 @@ export async function fetchMarketData(
     dxy,
     fear_greed,
     sector_heatmap,
+    trends,
     portfolio: evaluated,
     cash_jpy: cashJpy,
     total_jpy,

@@ -10,8 +10,8 @@ import { sendReportEmail } from "@/lib/email";
 import { appendDailyToSheets } from "@/lib/googleSheets";
 
 export const dynamic = "force-dynamic";
-// Vercel Pro以上でタイムアウト延長（Claude APIが最大90秒かかる）
-export const maxDuration = 120;
+// 構造分析を含むレポートはClaude APIの生成に2分前後かかる（実測128秒）ため、余裕を持って300秒（Fluid compute上限）
+export const maxDuration = 300;
 
 export async function POST() {
   try {
@@ -25,17 +25,20 @@ export async function POST() {
     }
 
     // 2. 並行データ取得（市場データ・ニュース・履歴・マクロ戦略・キャッシュ・その他資産）
-    const [cashJpy, news, history, macroStrategy, otherAssets] = await Promise.all([
+    // history: チャート用(直近30件) / longHistory: AIの構造分析用(約1年分。期間別の対S&P500成績・ドローダウン算出)
+    const [cashJpy, news, history, longHistory, macroStrategy, otherAssets] = await Promise.all([
       getCashJpy(),
       fetchNews(),
       getHistoryData(30),
+      getHistoryData(250),
       getMacroStrategy(),
       getOtherAssets(),
     ]);
-    const market = await fetchMarketData(portfolio, cashJpy);
+    // withTrend: 1年分の日足から中期トレンド(騰落率・移動平均・高値比)を算出（AIの俯瞰分析用）
+    const market = await fetchMarketData(portfolio, cashJpy, { withTrend: true });
 
     // 3. Claude APIでレポート生成
-    const reportMd = await generateReport(market, news, history, macroStrategy);
+    const reportMd = await generateReport(market, news, longHistory, macroStrategy);
 
     // 「## 📰 本日のマーケットトピックス」セクションをAI分析と分離
     const TOPICS_MARKER = "## 📰 本日のマーケットトピックス";

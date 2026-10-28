@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 // Vercel Cron Jobから毎日 22:00 UTC (翌日07:00 JST) に呼ばれる
-export const maxDuration = 120;
+// 実行する /api/report の処理に合わせて300秒（Claude APIの生成が2分前後かかるため）
+export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
   // CRON_SECRETで保護（必須 — 未設定の場合は500を返す）

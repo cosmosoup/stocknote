@@ -23,6 +23,21 @@ export interface PortfolioEval extends PortfolioItem {
   split_suspected?: boolean; // 含損益%が異常値（株式分割/併合等でコストデータがずれている可能性）
   week52_high?: number;      // 52週高値（現地通貨）
   week52_low?: number;       // 52週安値（現地通貨）
+  trend?: TrendStats;        // 中期トレンド指標（レポート生成時のみ取得）
+}
+
+// 中長期トレンド指標（現地通貨ベース・日足終値から算出）
+export interface TrendStats {
+  ret_1w: number | null;       // 約1週間(5営業日)騰落率%
+  ret_1m: number | null;       // 約1か月(21営業日)
+  ret_3m: number | null;       // 約3か月(63営業日)
+  ret_6m: number | null;       // 約6か月(126営業日)
+  ret_1y: number | null;       // 約1年(取得できた最古の終値から)
+  vs_ma50: number | null;      // 50日移動平均からの乖離%
+  vs_ma200: number | null;     // 200日移動平均からの乖離%（データ不足ならnull）
+  dd_from_high: number | null; // 直近1年高値からの下落率%（0以下）
+  bars: number;                // 算出に使えた日足本数
+  split_adjusted?: boolean;    // 株式分割・併合を検知して価格を補正済み
 }
 
 // 米国セクターETFの前日比（セクターヒートマップ用）
@@ -30,6 +45,7 @@ export interface SectorHeat {
   ticker: string;      // 'XLK' 等
   sector: string;      // 日本語セクター名
   change_pct: number;  // 前日比%
+  trend?: TrendStats;  // 中期トレンド（レポート生成時のみ）
 }
 
 // 市場データ
@@ -51,6 +67,7 @@ export interface MarketData {
   dxy: number;              // ドル指数（DXY）
   fear_greed: number;       // Fear & Greed Index
   sector_heatmap?: SectorHeat[]; // 米国セクターETF前日比一覧
+  trends?: Record<string, TrendStats>; // 指数・為替・商品の中期トレンド（sp500, nasdaq, vix, tnx, usdjpy, gold, oil）
   portfolio: PortfolioEval[];
   cash_jpy: number;         // キャッシュ残高（円）
   total_jpy: number;        // 株式評価額（万円、キャッシュ除く）
