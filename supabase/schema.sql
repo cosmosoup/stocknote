@@ -50,6 +50,15 @@ CREATE TABLE IF NOT EXISTS monthly_report_log (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_monthly_report_log_month ON monthly_report_log (month);
 CREATE INDEX IF NOT EXISTS idx_monthly_report_log_created_at ON monthly_report_log (created_at DESC);
 
+-- ★ セキュリティ: 行レベルセキュリティ(RLS)を有効化
+-- ポリシーを作らないことで anon / authenticated ロールからの全アクセスを拒否する。
+-- アプリは service_role キー（RLSをバイパス）をサーバー側でのみ使用するため影響なし。
+ALTER TABLE portfolio          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_log         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE settings           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE monthly_report_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE asset_snapshot     ENABLE ROW LEVEL SECURITY;
+
 -- ポートフォリオ初期データ（必要に応じて編集してください）
 -- INSERT INTO portfolio (ticker, shares, cost_price, cost_rate) VALUES
 --   ('VT',   100, 144.00, 150.00),
