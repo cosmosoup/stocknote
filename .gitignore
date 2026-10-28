@@ -22,3 +22,6 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code のローカル許可設定（実行したコマンド内の秘密情報が含まれ得るため追跡しない）
+.claude/settings.local.json
